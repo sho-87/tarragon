@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 
@@ -63,9 +62,6 @@ func refreshProjects() tea.Msg {
 	if err != nil {
 		return errMsg{err}
 	}
-
-	fmt.Printf("Found %d project(s):\n", len(projects))
-	fmt.Println(projects)
 
 	return refreshProjectsMsg(projects)
 }
