@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/fs"
 	"os"
@@ -11,6 +12,8 @@ import (
 
 // https://www.zackproser.com/blog/bubbletea-state-machine
 // https://github.com/charmbracelet/bubbletea/issues/27
+
+var path string
 
 type model struct {
 	spinner  spinner.Model
@@ -91,9 +94,17 @@ func (m model) View() string {
 }
 
 func main() {
-	p := tea.NewProgram(initialModel())
-	_, err := p.Run()
+	cwd, err := os.Getwd()
 	if err != nil {
+		fmt.Printf("Uh oh, there was an error: %v\n", err)
+		os.Exit(1)
+	}
+	flag.StringVar(&path, "path", cwd, "Path to search for Terraform projects")
+	flag.Parse()
+
+	p := tea.NewProgram(initialModel())
+	_, runErr := p.Run()
+	if runErr != nil {
 		fmt.Printf("Uh oh, there was an error: %v\n", err)
 		os.Exit(1)
 	}
