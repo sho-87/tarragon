@@ -11,47 +11,57 @@ import (
 type model struct {
 	cursor   int
 	projects []fs.DirEntry
+	err      error
 }
+
+type refreshProjectsMsg []fs.DirEntry
+type errMsg struct{ err error }
+
+func (e errMsg) Error() string { return e.err.Error() }
 
 func initialModel() model {
 	return model{}
 }
 
 func (m model) Init() tea.Cmd {
-	refreshProjects(&m)
-	return nil
+	return refreshProjects
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
-	case tea.KeyMsg:
-		k := msg.(tea.KeyMsg)
-		if k.Type == tea.KeyCtrlC {
-			return m, tea.Quit
-		}
+	switch msg := msg.(type) {
 
-		keyString := k.String()
-		switch keyString {
-		case "q":
+	case refreshProjectsMsg:
+		m.projects = msg
+		return m, nil
+
+	case errMsg:
+		m.err = msg
+		return m, tea.Quit
+
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "r":
-			refreshProjects(&m)
-			return m, nil
+			return m, refreshProjects
 		}
 	}
 	return m, nil
 }
 
 func (m model) View() string {
+	if m.err != nil {
+		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
+	}
+
 	return fmt.Sprintf("Hello, Bubble Tea!")
 }
 
 func main() {
-	model := initialModel()
-	p := tea.NewProgram(model)
+	p := tea.NewProgram(initialModel())
 	_, err := p.Run()
 	if err != nil {
-		fmt.Printf("Alas, there's been an error: %v", err)
+		fmt.Printf("Uh oh, there was an error: %v\n", err)
 		os.Exit(1)
 	}
 }

@@ -33,8 +33,11 @@ func TestFindProjects(t *testing.T) {
 			".terraform/root.go": {},
 		}
 
-		projects := findAllTerraformProjects(filesystem)
 		want := []fs.DirEntry{MockDirEntry{name: "."}}
+		projects, err := findAllTerraformProjects(filesystem)
+		if err != nil {
+			t.Errorf("Got error %v:", err)
+		}
 		assertSameDirectories(t, projects, want)
 	})
 
@@ -44,8 +47,11 @@ func TestFindProjects(t *testing.T) {
 			"root.go":                 {},
 		}
 
-		projects := findAllTerraformProjects(filesystem)
 		want := []fs.DirEntry{MockDirEntry{name: "."}}
+		projects, err := findAllTerraformProjects(filesystem)
+		if err != nil {
+			t.Errorf("Got error %v:", err)
+		}
 		assertSameDirectories(t, projects, want)
 	})
 
@@ -55,8 +61,11 @@ func TestFindProjects(t *testing.T) {
 			".test/test.go":           {},
 		}
 
-		projects := findAllTerraformProjects(filesystem)
 		want := []fs.DirEntry{MockDirEntry{name: "."}}
+		projects, err := findAllTerraformProjects(filesystem)
+		if err != nil {
+			t.Errorf("Got error %v:", err)
+		}
 		assertSameDirectories(t, projects, want)
 	})
 
@@ -66,8 +75,11 @@ func TestFindProjects(t *testing.T) {
 			"project/.terraform/terraform.go": {},
 		}
 
-		projects := findAllTerraformProjects(filesystem)
 		want := []fs.DirEntry{MockDirEntry{name: "."}, MockDirEntry{name: "project"}}
+		projects, err := findAllTerraformProjects(filesystem)
+		if err != nil {
+			t.Errorf("Got error %v:", err)
+		}
 		assertSameDirectories(t, projects, want)
 	})
 
@@ -77,8 +89,11 @@ func TestFindProjects(t *testing.T) {
 			"project/sub/.terraform/terraform.go": {},
 		}
 
-		projects := findAllTerraformProjects(filesystem)
 		want := []fs.DirEntry{MockDirEntry{name: "."}, MockDirEntry{name: "sub"}}
+		projects, err := findAllTerraformProjects(filesystem)
+		if err != nil {
+			t.Errorf("Got error %v:", err)
+		}
 		assertSameDirectories(t, projects, want)
 	})
 }

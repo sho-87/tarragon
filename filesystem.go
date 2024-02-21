@@ -4,61 +4,68 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 const TerraformDir = ".terraform"
 
-func isTerraformProject(filesystem fs.FS, d fs.DirEntry, path string) bool {
+func isTerraformProject(filesystem fs.FS, d fs.DirEntry, path string) (bool, error) {
 	if !d.IsDir() {
-		return false
+		return false, nil
 	}
 
-	// fmt.Println("Checking", path)
 	dir, err := fs.ReadDir(filesystem, path)
 	if err != nil {
-		fmt.Println("Error reading directory", path)
-		panic(err)
+		return false, err
 	}
 
 	for _, currentDir := range dir {
 		if currentDir.IsDir() && currentDir.Name() == TerraformDir {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
-func findAllTerraformProjects(filesystem fs.FS) []fs.DirEntry {
+func findAllTerraformProjects(filesystem fs.FS) ([]fs.DirEntry, error) {
 	projects := []fs.DirEntry{}
 
-	err := fs.WalkDir(filesystem, ".", func(path string, d fs.DirEntry, err error) error {
+	fs.WalkDir(filesystem, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Printf("Error walking through %s: %v\n", d.Name(), err)
 			return err
 		}
 		if d.Name() == TerraformDir {
 			return fs.SkipDir
 		}
 
-		if isTerraformProject(filesystem, d, path) {
+		isProject, err := isTerraformProject(filesystem, d, path)
+
+		if err != nil {
+			return err
+		} else if isProject {
 			projects = append(projects, d)
 		}
+
 		return nil
 	})
 
-	if err != nil {
-		panic(err)
-	}
-	return projects
+	return projects, nil
 }
 
-func refreshProjects(m *model) {
+func refreshProjects() tea.Msg {
 	dir, err := os.Getwd()
-	fmt.Println("Refreshing", dir)
 	if err != nil {
-		panic(err)
+		return errMsg{err}
 	}
-	m.projects = findAllTerraformProjects(os.DirFS(dir))
-	fmt.Printf("Found %d project(s):\n", len(m.projects))
-	fmt.Println(m.projects)
+
+	projects, err := findAllTerraformProjects(os.DirFS(dir))
+	if err != nil {
+		return errMsg{err}
+	}
+
+	fmt.Printf("Found %d project(s):\n", len(projects))
+	fmt.Println(projects)
+
+	return refreshProjectsMsg(projects)
 }
