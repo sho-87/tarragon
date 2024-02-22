@@ -24,12 +24,14 @@ type model struct {
 }
 
 type Project struct {
-	Name         string
-	Path         string
-	LastModified time.Time
+	Name          string
+	Path          string
+	LastModified  time.Time
+	TerraformPlan terraformPlan
 }
 
 type refreshProjectsMsg []Project
+type updatePlanMsg Project
 type errMsg struct{ err error }
 
 func (e errMsg) Error() string { return e.err.Error() }
@@ -59,6 +61,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.working = false
 		return m, nil
 
+	case updatePlanMsg:
+		m.working = false
+		return m, nil
+
 	case errMsg:
 		m.err = msg
 		return m, tea.Quit
@@ -70,6 +76,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			m.working = true
 			return m, tea.Batch(m.spinner.Tick, refreshProjects)
+		case "u":
+			m.working = true
+			return m, tea.Batch(m.spinner.Tick, updatePlan(&m.projects[1]))
+		case "U":
+			m.working = true
+			return m, tea.Batch(m.spinner.Tick, updateAllPlans(m.projects))
 		case "s":
 			m.working = !m.working
 			return m, m.spinner.Tick
@@ -93,7 +105,7 @@ func (m model) View() string {
 
 	projects := "Terraform Projects:\n"
 	for _, p := range m.projects {
-		projects += fmt.Sprintf("\n  - %s // %s (%s)\n", p.Name, p.Path, p.LastModified.Format("2006-01-02 15:04:05"))
+		projects += fmt.Sprintf("\n  - %s | %s | Add: %d Change: %d Destroy: %d | (%s)\n", p.Name, p.Path, p.TerraformPlan.Add, p.TerraformPlan.Change, p.TerraformPlan.Destroy, p.LastModified.Format("2006-01-02 15:04:05"))
 	}
 
 	return projects + working
