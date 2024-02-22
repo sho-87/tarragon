@@ -15,14 +15,15 @@ type terraformPlan struct {
 	Destroy int
 }
 
-func updateAllPlans(projects []Project) tea.Cmd {
-	return func() tea.Msg {
-		for i := range projects {
-			updatePlan(&projects[i])()
-		}
-		return refreshProjectsMsg(projects)
-	}
-}
+// func updateAllPlans(projects []Project) tea.Cmd {
+// 	return func() tea.Msg {
+// 		for i := range projects {
+// 			updateFn := updatePlan(&projects[i])
+// 			go updateFn()
+// 		}
+// 		return updateAllPlansMsg(projects)
+// 	}
+// }
 
 func updatePlan(project *Project) tea.Cmd {
 	return func() tea.Msg {

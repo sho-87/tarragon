@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -31,6 +32,7 @@ type Project struct {
 }
 
 type refreshProjectsMsg []Project
+type updateAllPlansMsg []Project
 type updatePlanMsg Project
 type errMsg struct{ err error }
 
@@ -65,6 +67,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.working = false
 		return m, nil
 
+	// case updateAllPlansMsg:
+	// 	m.working = false
+	// 	return m, nil
+
 	case errMsg:
 		m.err = msg
 		return m, tea.Quit
@@ -81,7 +87,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.spinner.Tick, updatePlan(&m.projects[1]))
 		case "U":
 			m.working = true
-			return m, tea.Batch(m.spinner.Tick, updateAllPlans(m.projects))
+			// HACK: theres a way to do with a single cmd and returning a []tea.Msg/[]tea.Cmd
+			var batchArgs []tea.Cmd
+			batchArgs = append(batchArgs, m.spinner.Tick)
+
+			for i := 1; i < len(m.projects); i++ {
+				batchArgs = append(batchArgs, updatePlan(&m.projects[i]))
+			}
+			return m, tea.Batch(batchArgs...)
 		case "s":
 			m.working = !m.working
 			return m, m.spinner.Tick
@@ -108,7 +121,9 @@ func (m model) View() string {
 		projects += fmt.Sprintf("\n  - %s | %s | Add: %d Change: %d Destroy: %d | (%s)\n", p.Name, p.Path, p.TerraformPlan.Add, p.TerraformPlan.Change, p.TerraformPlan.Destroy, p.LastModified.Format("2006-01-02 15:04:05"))
 	}
 
-	return projects + working
+	goroutines := runtime.NumGoroutine()
+
+	return projects + working + fmt.Sprintf("%d", goroutines)
 }
 
 func main() {
