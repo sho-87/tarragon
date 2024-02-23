@@ -4,8 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime"
-	"time"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,19 +16,12 @@ import (
 var SearchPath string
 
 type model struct {
+	table    projectsTable
 	spinner  spinner.Model
 	working  bool
-	cursor   int
 	projects []Project
 	err      error
 	message  string
-}
-
-type Project struct {
-	Name          string
-	Path          string
-	LastModified  time.Time
-	TerraformPlan terraformPlan
 }
 
 type updatePlanMsg Project
@@ -44,7 +36,8 @@ func (e errMsg) Error() string {
 func initialModel() model {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
-	return model{spinner: s, working: false}
+	table := createProjectsTable()
+	return model{table: table, spinner: s, working: false}
 }
 
 func (m model) Init() tea.Cmd {
@@ -52,6 +45,14 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var (
+		cmd  tea.Cmd
+		cmds []tea.Cmd
+	)
+	m.table.updateFooter()
+	m.table.model, cmd = m.table.model.Update(msg)
+	cmds = append(cmds, cmd)
+
 	switch msg := msg.(type) {
 
 	case spinner.TickMsg:
@@ -64,10 +65,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case refreshFinishedMsg:
 		m.projects = msg
 		m.working = false
+		m.table.updateData(m.projects)
 		return m, nil
 
 	case updatePlanMsg:
 		m.message = fmt.Sprintf("Updated %s", msg.Name)
+		m.table.updateData(m.projects)
 		return m, nil
 
 	case updatesFinishedMsg:
@@ -83,32 +86,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
-			return m, tea.Quit
+			cmds = append(cmds, tea.Quit)
 		case "r":
 			m.working = true
-			return m, tea.Batch(m.spinner.Tick, refreshProjects)
+			cmds = append(cmds, m.spinner.Tick, refreshProjects)
 		case "u":
 			m.working = true
 			m.message = "Updating project"
-			return m, tea.Batch(m.spinner.Tick, updatePlan(&m.projects[1]))
+			cmds = append(cmds, m.spinner.Tick, updatePlan(&m.projects[1]))
 		case "U":
 			m.working = true
 			m.message = "Updating all projects"
 
 			var batchArgs []tea.Cmd
 			batchArgs = append(batchArgs, m.spinner.Tick)
-
 			for i := 0; i < len(m.projects); i++ {
 				batchArgs = append(batchArgs, updatePlan(&m.projects[i]))
 			}
-			return m, tea.Sequence(tea.Batch(batchArgs...), updatesFinished)
+			cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
 		case "s":
 			m.working = !m.working
-			return m, m.spinner.Tick
+			cmds = append(cmds, m.spinner.Tick)
 		}
 	}
 
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
 func (m model) View() string {
@@ -116,21 +118,23 @@ func (m model) View() string {
 		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
 
+	selected := []string{}
+	for _, row := range m.table.model.SelectedRows() {
+		selected = append(selected, row.Data[columnName].(string))
+	}
+
+	body := strings.Builder{}
+	body.WriteString(m.table.model.View())
+	body.WriteString("\n")
+
 	var working string
 	if m.working {
-		working = fmt.Sprintf("\n\n   %s %s...\n\n", m.spinner.View(), m.message)
+		working = fmt.Sprintf("\n   %s %s...\n\n", m.spinner.View(), m.message)
 	} else {
 		working = ""
 	}
 
-	projects := "Terraform Projects:\n"
-	for _, p := range m.projects {
-		projects += fmt.Sprintf("\n  - %s | %s | Add: %d Change: %d Destroy: %d | (%s)\n", p.Name, p.Path, p.TerraformPlan.Add, p.TerraformPlan.Change, p.TerraformPlan.Destroy, p.LastModified.Format("2006-01-02 15:04:05"))
-	}
-
-	goroutines := runtime.NumGoroutine()
-
-	return projects + working + fmt.Sprintf("%d", goroutines)
+	return body.String() + working
 }
 
 func main() {
