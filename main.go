@@ -22,6 +22,7 @@ type model struct {
 	cursor   int
 	projects []Project
 	err      error
+	message  string
 }
 
 type Project struct {
@@ -31,12 +32,14 @@ type Project struct {
 	TerraformPlan terraformPlan
 }
 
-type refreshProjectsMsg []Project
-type updateAllPlansMsg []Project
 type updatePlanMsg Project
+type updatesFinishedMsg string
+type refreshFinishedMsg []Project
 type errMsg struct{ err error }
 
-func (e errMsg) Error() string { return e.err.Error() }
+func (e errMsg) Error() string {
+	return e.err.Error()
+}
 
 func initialModel() model {
 	s := spinner.New()
@@ -58,21 +61,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, cmd
 
-	case refreshProjectsMsg:
+	case refreshFinishedMsg:
 		m.projects = msg
 		m.working = false
 		return m, nil
 
 	case updatePlanMsg:
-		m.working = false
+		m.message = fmt.Sprintf("Updated %s", msg.Name)
 		return m, nil
 
-	// case updateAllPlansMsg:
-	// 	m.working = false
-	// 	return m, nil
+	case updatesFinishedMsg:
+		m.working = false
+		m.message = string(msg)
+		return m, nil
 
 	case errMsg:
 		m.err = msg
+		fmt.Printf("Error: %v\n", msg)
 		return m, tea.Quit
 
 	case tea.KeyMsg:
@@ -84,17 +89,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.spinner.Tick, refreshProjects)
 		case "u":
 			m.working = true
+			m.message = "Updating project"
 			return m, tea.Batch(m.spinner.Tick, updatePlan(&m.projects[1]))
 		case "U":
 			m.working = true
-			// HACK: theres a way to do with a single cmd and returning a []tea.Msg/[]tea.Cmd
+			m.message = "Updating all projects"
+
 			var batchArgs []tea.Cmd
 			batchArgs = append(batchArgs, m.spinner.Tick)
 
-			for i := 1; i < len(m.projects); i++ {
+			for i := 0; i < len(m.projects); i++ {
 				batchArgs = append(batchArgs, updatePlan(&m.projects[i]))
 			}
-			return m, tea.Batch(batchArgs...)
+			return m, tea.Sequence(tea.Batch(batchArgs...), updatesFinished)
 		case "s":
 			m.working = !m.working
 			return m, m.spinner.Tick
@@ -111,7 +118,7 @@ func (m model) View() string {
 
 	var working string
 	if m.working {
-		working = fmt.Sprintf("\n\n   %s working...\n\n", m.spinner.View())
+		working = fmt.Sprintf("\n\n   %s %s...\n\n", m.spinner.View(), m.message)
 	} else {
 		working = ""
 	}

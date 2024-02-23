@@ -1,9 +1,11 @@
 package main
 
 import (
+	// "os"
 	"os/exec"
-	"regexp"
-	"strconv"
+	// "regexp"
+	// "strconv"
+	"encoding/json"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,62 +17,63 @@ type terraformPlan struct {
 	Destroy int
 }
 
-// func updateAllPlans(projects []Project) tea.Cmd {
-// 	return func() tea.Msg {
-// 		for i := range projects {
-// 			updateFn := updatePlan(&projects[i])
-// 			go updateFn()
-// 		}
-// 		return updateAllPlansMsg(projects)
-// 	}
-// }
+type PlanLogEntry struct {
+	Level   string        `json:"@level"`
+	Changes ChangeSummary `json:"changes"`
+}
+
+type ChangeSummary struct {
+	Add    int `json:"add"`
+	Change int `json:"change"`
+	Remove int `json:"remove"`
+}
+
+func updatesFinished() tea.Msg {
+	return updatesFinishedMsg("Projects updated")
+}
 
 func updatePlan(project *Project) tea.Cmd {
 	return func() tea.Msg {
-		planChannel := make(chan string)
-		go runTerraformPlan(project.Path, planChannel)
-		res := <-planChannel
-
-		parsedPlan, err := parsePlanOutput(res)
-		if err != nil {
-			return errMsg{err}
-		}
+		output := runTerraformPlan(project.Path)
+		parsedPlan := parsePlanOutput(output)
 		project.TerraformPlan = parsedPlan
 
 		return updatePlanMsg(*project)
 	}
 }
 
-func runTerraformPlan(dir string, ch chan string) {
-	defer close(ch)
-	cmd := exec.Command("terraform", "plan")
+func runTerraformPlan(dir string) string {
+	cmd := exec.Command("terraform", "plan", "--json")
 	cmd.Dir = dir
+
+	// terraform plan errors also go to stdout and we want to capture those when parsing the plan output instead of here
 	out, _ := cmd.CombinedOutput()
-	ch <- string(out)
+	return string(out)
 }
 
-func parsePlanOutput(output string) (terraformPlan, error) {
-	errors := strings.Contains(output, "Error:")
-	if errors {
-		return terraformPlan{-1, -1, -1}, nil
+func parsePlanOutput(output string) terraformPlan {
+	logBuffer := []PlanLogEntry{}
+	for _, line := range strings.Split(output, "\n") {
+		var entry PlanLogEntry
+		if err := json.NewDecoder(strings.NewReader(line)).Decode(&entry); err != nil {
+			continue
+		} else {
+			logBuffer = append(logBuffer, entry)
+		}
 	}
 
-	noChanges := strings.Contains(output, "No changes.")
-	if noChanges {
-		return terraformPlan{0, 0, 0}, nil
+	// iterate backwards because plan errors can come after changes
+	// and we want to be alerted to errors instead in those cases
+	for i := len(logBuffer) - 1; i >= 0; i-- {
+		entry := logBuffer[i]
+
+		if entry.Level == "error" {
+			return terraformPlan{-1, -1, -1}
+		} else if entry.Level == "info" && entry.Changes != (ChangeSummary{}) {
+			changes := entry.Changes
+			return terraformPlan{changes.Add, changes.Change, changes.Remove}
+		}
 	}
 
-	outputsOnly := strings.Count(output, "Changes to Outputs:")
-	if outputsOnly > 0 {
-		return terraformPlan{0, outputsOnly, 0}, nil
-	}
-
-	pattern := `(\d+) to add, (\d+) to change, (\d+) to destroy`
-	regex := regexp.MustCompile(pattern)
-	submatches := regex.FindStringSubmatch(output)
-
-	toAdd, _ := strconv.Atoi(submatches[1])
-	toChange, _ := strconv.Atoi(submatches[2])
-	toDestroy, _ := strconv.Atoi(submatches[3])
-	return terraformPlan{toAdd, toChange, toDestroy}, nil
+	return terraformPlan{0, 0, 0}
 }

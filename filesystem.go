@@ -68,5 +68,5 @@ func refreshProjects() tea.Msg {
 		return errMsg{err}
 	}
 
-	return refreshProjectsMsg(projects)
+	return refreshFinishedMsg(projects)
 }
