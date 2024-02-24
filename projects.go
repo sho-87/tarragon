@@ -20,10 +20,24 @@ type projectsTable struct {
 	model table.Model
 }
 
-func (m *projectsTable) updateData(projects []Project) {
+func matchHighlightedProject(path string, projects *[]Project) *Project {
+	for i := range *projects {
+		if (*projects)[i].Path == path {
+			return &(*projects)[i]
+		}
+	}
+	return nil
+}
+
+func (m *projectsTable) updateData(projects *[]Project) {
 	// FIXME: selected rows are lost when updating the table because all rows are replaced
 	// FIXME: clearing a filter currently doesnt update the table to show all rows
 	// https://github.com/Evertras/bubble-table/issues/136
+	if debug {
+		for i := range *projects {
+			log.Printf("updateData: %p", &(*projects)[i])
+		}
+	}
 	m.model = m.model.WithRows(generateRowsFromProjects(projects))
 	m.updateFooter()
 }
@@ -50,11 +64,12 @@ const (
 	columnChange       = "Change"
 	columnDestroy      = "Destroy"
 	columnLastModified = "LastModified"
+	columnProject      = "Project"
 )
 
 func createProjectsTable() projectsTable {
 	columns := generateColumns()
-	rows := generateRowsFromProjects([]Project{})
+	rows := generateRowsFromProjects(&[]Project{})
 
 	keys := table.DefaultKeyMap()
 	keys.RowDown.SetKeys("j", "down", "s")
@@ -108,31 +123,45 @@ func generateColumns() []table.Column {
 	return columns
 }
 
-func generateRowsFromProjects(projects []Project) []table.Row {
+func generateRowsFromProjects(projects *[]Project) []table.Row {
+	if debug {
+		for i := range *projects {
+			log.Printf("generateRowsFromProjects: %p", &(*projects)[i])
+		}
+	}
+
 	errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000"))
+	pathStyle := lipgloss.NewStyle().Italic(true).Faint(true)
+
 	rows := []table.Row{}
-	for _, entry := range projects {
-		addText := fmt.Sprint(entry.TerraformPlan.Add)
-		if entry.TerraformPlan.Add == -1 {
+	for i := range *projects {
+		if debug {
+			log.Printf("generateRowsFromProjects: %v", (*projects)[i])
+		}
+
+		addText := fmt.Sprint((*projects)[i].TerraformPlan.Add)
+		if (*projects)[i].TerraformPlan.Add == -1 {
 			addText = errorStyle.Render("Error")
 		}
-		changeText := fmt.Sprint(entry.TerraformPlan.Change)
-		if entry.TerraformPlan.Change == -1 {
+		changeText := fmt.Sprint((*projects)[i].TerraformPlan.Change)
+		if (*projects)[i].TerraformPlan.Change == -1 {
 			changeText = errorStyle.Render("Error")
 		}
-		destroyText := fmt.Sprint(entry.TerraformPlan.Destroy)
-		if entry.TerraformPlan.Destroy == -1 {
+		destroyText := fmt.Sprint((*projects)[i].TerraformPlan.Destroy)
+		if (*projects)[i].TerraformPlan.Destroy == -1 {
 			destroyText = errorStyle.Render("Error")
 		}
 
 		row := table.NewRow(table.RowData{
-			columnName:         entry.Name,
-			columnPath:         lipgloss.NewStyle().Italic(true).Faint(true).Render(entry.Path),
+			columnName:         (*projects)[i].Name,
+			columnPath:         pathStyle.Render((*projects)[i].Path),
 			columnAdd:          addText,
 			columnChange:       changeText,
 			columnDestroy:      destroyText,
-			columnLastModified: entry.LastModified.Format("2006-01-02 15:04:05"),
+			columnLastModified: (*projects)[i].LastModified.Format("2006-01-02 15:04:05"),
+			columnProject:      (*projects)[i],
 		})
+
 		rows = append(rows, row)
 	}
 

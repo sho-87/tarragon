@@ -64,12 +64,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case refreshFinishedMsg:
 		m.projects = msg
 		m.working = false
-		m.table.updateData(m.projects)
+
+		for i := range m.projects {
+			log.Printf("refreshFinishedMsg: %p", &m.projects[i])
+		}
+
+		m.table.updateData(&m.projects)
+		for i := range m.projects {
+			log.Printf("full circle: %p", &m.projects[i])
+		}
+
 		return m, nil
 
 	case updatePlanMsg:
 		m.message = fmt.Sprintf("Updated %s", msg.Name)
-		m.table.updateData(m.projects)
+		m.table.updateData(&m.projects)
 		return m, nil
 
 	case updatesFinishedMsg:
@@ -89,17 +98,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			m.working = true
 			cmds = append(cmds, m.spinner.Tick, refreshProjects)
-		case "u":
+		case "p":
+			project := m.table.model.HighlightedRow().Data[columnProject].(Project)
+			highlightedProject := matchHighlightedProject(project.Path, &m.projects)
 			m.working = true
-			m.message = "Updating project"
-			cmds = append(cmds, m.spinner.Tick, updatePlan(&m.projects[1]))
-		case "U":
+			m.message = fmt.Sprintf("Terraform Plan: %s", project.Name)
+			cmds = append(cmds, m.spinner.Tick, updatePlan(highlightedProject))
+		case "P":
 			m.working = true
-			m.message = "Updating all projects"
+			m.message = "Terraform Plan: all projects"
 
 			var batchArgs []tea.Cmd
 			batchArgs = append(batchArgs, m.spinner.Tick)
-			for i := 0; i < len(m.projects); i++ {
+			for i := range len(m.projects) {
 				batchArgs = append(batchArgs, updatePlan(&m.projects[i]))
 			}
 			cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))

@@ -31,10 +31,11 @@ func updatesFinished() tea.Msg {
 }
 
 func updatePlan(project *Project) tea.Cmd {
+	if debug {
+		log.Printf("updatePlan: %p", project)
+	}
+
 	return func() tea.Msg {
-		if debug {
-			log.Println("updatePlan", project)
-		}
 		output := runTerraformPlan(project.Path)
 		parsedPlan := parsePlanOutput(output)
 		project.TerraformPlan = parsedPlan
