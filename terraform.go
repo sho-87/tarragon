@@ -1,11 +1,9 @@
 package main
 
 import (
-	// "os"
-	"os/exec"
-	// "regexp"
-	// "strconv"
 	"encoding/json"
+	"log"
+	"os/exec"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -34,6 +32,9 @@ func updatesFinished() tea.Msg {
 
 func updatePlan(project *Project) tea.Cmd {
 	return func() tea.Msg {
+		if debug {
+			log.Println("updatePlan", project)
+		}
 		output := runTerraformPlan(project.Path)
 		parsedPlan := parsePlanOutput(output)
 		project.TerraformPlan = parsedPlan

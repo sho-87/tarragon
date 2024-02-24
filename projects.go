@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -68,6 +69,7 @@ func createProjectsTable() projectsTable {
 			WithSelectedText("   ", " * ").
 			Filtered(true).
 			Focused(true).
+			BorderRounded().
 			SortByAsc(columnLastModified).
 			WithKeyMap(keys).
 			WithTargetWidth(100).

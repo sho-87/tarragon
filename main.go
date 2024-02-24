@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -10,9 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// https://www.zackproser.com/blog/bubbletea-state-machine
-// https://github.com/charmbracelet/bubbletea/issues/27
-
+var debug bool = false
 var SearchPath string
 
 type model struct {
@@ -143,8 +142,20 @@ func main() {
 		fmt.Printf("Uh oh, there was an error: %v\n", err)
 		os.Exit(1)
 	}
+
+	flag.BoolVar(&debug, "debug", false, "Enable logging to file (debug.log)")
 	flag.StringVar(&SearchPath, "path", cwd, "Path to search for Terraform projects")
 	flag.Parse()
+
+	if debug {
+		log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
+		f, err := tea.LogToFile("debug.log", "debug")
+		if err != nil {
+			fmt.Println("fatal:", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+	}
 
 	p := tea.NewProgram(initialModel())
 	_, runErr := p.Run()
