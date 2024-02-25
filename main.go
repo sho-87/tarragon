@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -18,6 +19,7 @@ type mainModel struct {
 	table     tableModel
 	altscreen bool
 	spinner   spinner.Model
+	progress  progress.Model
 	working   bool
 	projects  []Project
 	err       error
@@ -33,11 +35,16 @@ func (e errMsg) Error() string {
 	return e.err.Error()
 }
 
+const (
+	progressPadding  = 2
+	progressMaxWidth = 80
+)
+
 func initialModel() mainModel {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
 	table := createProjectsTable()
-	return mainModel{table: table, spinner: s, working: false}
+	return mainModel{table: table, spinner: s, progress: progress.New(progress.WithDefaultGradient()), working: false}
 }
 
 func (m mainModel) Init() tea.Cmd {
@@ -56,33 +63,43 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.progress.Width = msg.Width - progressPadding*2 - 4
+		if m.progress.Width > progressMaxWidth {
+			m.progress.Width = progressMaxWidth
+		}
+
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		if m.working {
 			m.spinner, cmd = m.spinner.Update(msg)
 		}
-		return m, cmd
+		cmds = append(cmds, cmd)
+
+	case progress.FrameMsg:
+		progressModel, cmd := m.progress.Update(msg)
+		m.progress = progressModel.(progress.Model)
+		cmds = append(cmds, cmd)
 
 	case refreshFinishedMsg:
 		m.projects = msg
 		m.working = false
 		m.table.updateData(&m.projects)
-		return m, nil
 
 	case updatePlanMsg:
 		m.message = fmt.Sprintf("Updated %s", msg.Name)
 		m.table.updateData(&m.projects)
-		return m, nil
+		cmd := m.progress.IncrPercent(float64(1) / float64(len(m.projects)))
+		cmds = append(cmds, cmd)
 
 	case updatesFinishedMsg:
 		m.working = false
 		m.message = string(msg)
-		return m, nil
 
 	case errMsg:
 		m.err = msg
 		fmt.Printf("Error: %v\n", msg)
-		return m, tea.Quit
+		cmds = append(cmds, tea.Quit)
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -119,11 +136,6 @@ func (m mainModel) View() string {
 		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
 
-	selected := []string{}
-	for _, row := range m.table.model.SelectedRows() {
-		selected = append(selected, row.Data[columnName].(string))
-	}
-
 	body := strings.Builder{}
 	body.WriteString(m.table.model.View())
 	body.WriteString("\n")
@@ -135,7 +147,14 @@ func (m mainModel) View() string {
 		working = ""
 	}
 
-	return body.String() + working
+	var progress string
+	if m.progress.Percent() > 0 && m.progress.Percent() < 1 {
+		progress = fmt.Sprintf("\n%s\n", m.progress.View())
+	} else {
+		progress = ""
+	}
+
+	return body.String() + working + progress
 }
 
 func main() {
