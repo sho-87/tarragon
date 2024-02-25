@@ -65,8 +65,8 @@ func findAllTerraformProjects(filesystem fs.FS) ([]Project, error) {
 func refreshProjects() tea.Msg {
 	projects, err := findAllTerraformProjects(os.DirFS(SearchPath))
 	if err != nil {
-		return errMsg{err}
+		return ErrMsg{err}
 	}
 
-	return refreshFinishedMsg(projects)
+	return RefreshFinishedMsg(projects)
 }

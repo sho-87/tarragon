@@ -12,11 +12,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var debug bool = false
+var Debug bool = false
 var SearchPath string
 
-type mainModel struct {
-	table     tableModel
+type MainModel struct {
+	table     TableModel
 	altscreen bool
 	spinner   spinner.Model
 	progress  progress.Model
@@ -26,12 +26,12 @@ type mainModel struct {
 	message   string
 }
 
-type updatePlanMsg Project
-type updatesFinishedMsg string
-type refreshFinishedMsg []Project
-type errMsg struct{ err error }
+type UpdatePlanMsg Project
+type UpdatesFinishedMsg string
+type RefreshFinishedMsg []Project
+type ErrMsg struct{ err error }
 
-func (e errMsg) Error() string {
+func (e ErrMsg) Error() string {
 	return e.err.Error()
 }
 
@@ -40,18 +40,18 @@ const (
 	progressMaxWidth = 80
 )
 
-func initialModel() mainModel {
+func initialModel() MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
 	table := createProjectsTable()
-	return mainModel{table: table, spinner: s, progress: progress.New(progress.WithDefaultGradient()), working: false}
+	return MainModel{table: table, spinner: s, progress: progress.New(progress.WithDefaultGradient()), working: false}
 }
 
-func (m mainModel) Init() tea.Cmd {
+func (m MainModel) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick, refreshProjects)
 }
 
-func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
@@ -59,7 +59,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.table.updateFooter()
 	m.table.model, cmd = m.table.model.Update(msg)
 	project, _ := m.table.model.HighlightedRow().Data[columnProject].(Project)
-	highlightedProject := matchHighlightedProject(project.Path, &m.projects)
+	highlightedProject := matchProjectInMemory(project.Path, &m.projects)
 	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
@@ -81,22 +81,22 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.progress = progressModel.(progress.Model)
 		cmds = append(cmds, cmd)
 
-	case refreshFinishedMsg:
+	case RefreshFinishedMsg:
 		m.projects = msg
 		m.working = false
 		m.table.updateData(&m.projects)
 
-	case updatePlanMsg:
+	case UpdatePlanMsg:
 		m.message = fmt.Sprintf("Updated %s", msg.Name)
 		m.table.updateData(&m.projects)
 		cmd := m.progress.IncrPercent(float64(1) / float64(len(m.projects)))
 		cmds = append(cmds, cmd)
 
-	case updatesFinishedMsg:
+	case UpdatesFinishedMsg:
 		m.working = false
 		m.message = string(msg)
 
-	case errMsg:
+	case ErrMsg:
 		m.err = msg
 		fmt.Printf("Error: %v\n", msg)
 		cmds = append(cmds, tea.Quit)
@@ -131,7 +131,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m mainModel) View() string {
+func (m MainModel) View() string {
 	if m.err != nil {
 		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
@@ -164,11 +164,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	flag.BoolVar(&debug, "debug", false, "Enable logging to file (debug.log)")
+	flag.BoolVar(&Debug, "debug", false, "Enable logging to file (debug.log)")
 	flag.StringVar(&SearchPath, "path", cwd, "Path to search for Terraform projects")
 	flag.Parse()
 
-	if debug {
+	if Debug {
 		log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
 		f, err := tea.LogToFile("debug.log", "debug")
 		if err != nil {

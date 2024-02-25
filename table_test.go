@@ -13,14 +13,14 @@ func TestMatchHighlightedProject(t *testing.T) {
 	}
 
 	t.Run("Match", func(t *testing.T) {
-		project := matchHighlightedProject("pPath", &projects)
+		project := matchProjectInMemory("pPath", &projects)
 		if project == nil {
 			t.Error("Expected to find a project")
 		}
 	})
 
 	t.Run("NoMatch", func(t *testing.T) {
-		project := matchHighlightedProject("noPath", &projects)
+		project := matchProjectInMemory("noPath", &projects)
 		if project != nil {
 			t.Error("Expected to not find a project")
 		}

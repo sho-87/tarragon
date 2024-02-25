@@ -39,11 +39,11 @@ type ChangeSummary struct {
 }
 
 func updatesFinished() tea.Msg {
-	return updatesFinishedMsg("Projects updated")
+	return UpdatesFinishedMsg("Projects updated")
 }
 
 func updatePlan(project *Project) tea.Cmd {
-	if debug {
+	if Debug {
 		log.Printf("updatePlan: %p", project)
 	}
 
@@ -52,7 +52,7 @@ func updatePlan(project *Project) tea.Cmd {
 		parsedPlan := parsePlanOutput(output)
 		project.TerraformPlan = parsedPlan
 
-		return updatePlanMsg(*project)
+		return UpdatePlanMsg(*project)
 	}
 }
 

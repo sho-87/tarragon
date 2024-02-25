@@ -16,11 +16,11 @@ type Project struct {
 	TerraformPlan TerraformChanges
 }
 
-type tableModel struct {
+type TableModel struct {
 	model table.Model
 }
 
-func matchHighlightedProject(path string, projects *[]Project) *Project {
+func matchProjectInMemory(path string, projects *[]Project) *Project {
 	for i := range *projects {
 		if (*projects)[i].Path == path {
 			return &(*projects)[i]
@@ -29,11 +29,11 @@ func matchHighlightedProject(path string, projects *[]Project) *Project {
 	return nil
 }
 
-func (m *tableModel) updateData(projects *[]Project) {
+func (m *TableModel) updateData(projects *[]Project) {
 	// FIXME: selected rows are lost when updating the table because all rows are replaced
 	// FIXME: clearing a filter currently doesnt update the table to show all rows
 	// https://github.com/Evertras/bubble-table/issues/136
-	if debug {
+	if Debug {
 		for i := range *projects {
 			log.Printf("updateData: %p", &(*projects)[i])
 		}
@@ -42,7 +42,7 @@ func (m *tableModel) updateData(projects *[]Project) {
 	m.updateFooter()
 }
 
-func (m *tableModel) updateFooter() {
+func (m *TableModel) updateFooter() {
 	footerText := fmt.Sprintf(
 		"Page %d/%d | # Projects: %d",
 		m.model.CurrentPage(),
@@ -67,7 +67,7 @@ const (
 	columnProject      = "Project"
 )
 
-func createProjectsTable() tableModel {
+func createProjectsTable() TableModel {
 	columns := generateColumns()
 	rows := generateRowsFromProjects(&[]Project{})
 
@@ -76,7 +76,7 @@ func createProjectsTable() tableModel {
 	keys.RowUp.SetKeys("k", "up")
 	keys.Filter.SetKeys("/", "f")
 
-	model := tableModel{
+	model := TableModel{
 		model: table.New(columns).
 			WithRows(rows).
 			HeaderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff")).Bold(true)).
@@ -124,7 +124,7 @@ func generateColumns() []table.Column {
 }
 
 func generateRowsFromProjects(projects *[]Project) []table.Row {
-	if debug {
+	if Debug {
 		for i := range *projects {
 			log.Printf("generateRowsFromProjects: %p", &(*projects)[i])
 		}
@@ -135,7 +135,7 @@ func generateRowsFromProjects(projects *[]Project) []table.Row {
 
 	rows := []table.Row{}
 	for i := range *projects {
-		if debug {
+		if Debug {
 			log.Printf("generateRowsFromProjects: %v", (*projects)[i])
 		}
 
