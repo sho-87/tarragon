@@ -9,7 +9,19 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type terraformPlan struct {
+type TerraformCommand string
+
+func (c TerraformCommand) String() string {
+	return string(c)
+}
+
+const (
+	Plan     TerraformCommand = "plan"
+	Validate TerraformCommand = "validate"
+	Apply    TerraformCommand = "apply"
+)
+
+type TerraformChanges struct {
 	Add     int
 	Change  int
 	Destroy int
@@ -36,7 +48,7 @@ func updatePlan(project *Project) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		output := runTerraformPlan(project.Path)
+		output := runTerraformCommand(project.Path, Plan)
 		parsedPlan := parsePlanOutput(output)
 		project.TerraformPlan = parsedPlan
 
@@ -44,8 +56,8 @@ func updatePlan(project *Project) tea.Cmd {
 	}
 }
 
-func runTerraformPlan(dir string) string {
-	cmd := exec.Command("terraform", "plan", "--json")
+func runTerraformCommand(dir string, command TerraformCommand) string {
+	cmd := exec.Command("terraform", command.String(), "--json")
 	cmd.Dir = dir
 
 	// terraform plan errors also go to stdout and we want to capture those when parsing the plan output instead of here
@@ -53,7 +65,7 @@ func runTerraformPlan(dir string) string {
 	return string(out)
 }
 
-func parsePlanOutput(output string) terraformPlan {
+func parsePlanOutput(output string) TerraformChanges {
 	logBuffer := []PlanLogEntry{}
 	for _, line := range strings.Split(output, "\n") {
 		var entry PlanLogEntry
@@ -70,12 +82,12 @@ func parsePlanOutput(output string) terraformPlan {
 		entry := logBuffer[i]
 
 		if entry.Level == "error" {
-			return terraformPlan{-1, -1, -1}
+			return TerraformChanges{-1, -1, -1}
 		} else if entry.Level == "info" && entry.Changes != (ChangeSummary{}) {
 			changes := entry.Changes
-			return terraformPlan{changes.Add, changes.Change, changes.Remove}
+			return TerraformChanges{changes.Add, changes.Change, changes.Remove}
 		}
 	}
 
-	return terraformPlan{0, 0, 0}
+	return TerraformChanges{0, 0, 0}
 }

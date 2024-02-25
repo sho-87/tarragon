@@ -14,13 +14,14 @@ import (
 var debug bool = false
 var SearchPath string
 
-type model struct {
-	table    projectsTable
-	spinner  spinner.Model
-	working  bool
-	projects []Project
-	err      error
-	message  string
+type mainModel struct {
+	table     tableModel
+	altscreen bool
+	spinner   spinner.Model
+	working   bool
+	projects  []Project
+	err       error
+	message   string
 }
 
 type updatePlanMsg Project
@@ -32,28 +33,29 @@ func (e errMsg) Error() string {
 	return e.err.Error()
 }
 
-func initialModel() model {
+func initialModel() mainModel {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
 	table := createProjectsTable()
-	return model{table: table, spinner: s, working: false}
+	return mainModel{table: table, spinner: s, working: false}
 }
 
-func (m model) Init() tea.Cmd {
+func (m mainModel) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick, refreshProjects)
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
 	)
 	m.table.updateFooter()
 	m.table.model, cmd = m.table.model.Update(msg)
+	project, _ := m.table.model.HighlightedRow().Data[columnProject].(Project)
+	highlightedProject := matchHighlightedProject(project.Path, &m.projects)
 	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
-
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		if m.working {
@@ -64,16 +66,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case refreshFinishedMsg:
 		m.projects = msg
 		m.working = false
-
-		for i := range m.projects {
-			log.Printf("refreshFinishedMsg: %p", &m.projects[i])
-		}
-
 		m.table.updateData(&m.projects)
-		for i := range m.projects {
-			log.Printf("full circle: %p", &m.projects[i])
-		}
-
 		return m, nil
 
 	case updatePlanMsg:
@@ -99,8 +92,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.working = true
 			cmds = append(cmds, m.spinner.Tick, refreshProjects)
 		case "p":
-			project := m.table.model.HighlightedRow().Data[columnProject].(Project)
-			highlightedProject := matchHighlightedProject(project.Path, &m.projects)
 			m.working = true
 			m.message = fmt.Sprintf("Terraform Plan: %s", project.Name)
 			cmds = append(cmds, m.spinner.Tick, updatePlan(highlightedProject))
@@ -123,7 +114,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m model) View() string {
+func (m mainModel) View() string {
 	if m.err != nil {
 		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
@@ -168,7 +159,7 @@ func main() {
 		defer f.Close()
 	}
 
-	p := tea.NewProgram(initialModel())
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
 	_, runErr := p.Run()
 	if runErr != nil {
 		fmt.Printf("Uh oh, there was an error: %v\n", err)

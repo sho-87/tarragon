@@ -13,10 +13,10 @@ type Project struct {
 	Name          string
 	Path          string
 	LastModified  time.Time
-	TerraformPlan terraformPlan
+	TerraformPlan TerraformChanges
 }
 
-type projectsTable struct {
+type tableModel struct {
 	model table.Model
 }
 
@@ -29,7 +29,7 @@ func matchHighlightedProject(path string, projects *[]Project) *Project {
 	return nil
 }
 
-func (m *projectsTable) updateData(projects *[]Project) {
+func (m *tableModel) updateData(projects *[]Project) {
 	// FIXME: selected rows are lost when updating the table because all rows are replaced
 	// FIXME: clearing a filter currently doesnt update the table to show all rows
 	// https://github.com/Evertras/bubble-table/issues/136
@@ -42,7 +42,7 @@ func (m *projectsTable) updateData(projects *[]Project) {
 	m.updateFooter()
 }
 
-func (m *projectsTable) updateFooter() {
+func (m *tableModel) updateFooter() {
 	footerText := fmt.Sprintf(
 		"Page %d/%d | # Projects: %d",
 		m.model.CurrentPage(),
@@ -67,7 +67,7 @@ const (
 	columnProject      = "Project"
 )
 
-func createProjectsTable() projectsTable {
+func createProjectsTable() tableModel {
 	columns := generateColumns()
 	rows := generateRowsFromProjects(&[]Project{})
 
@@ -76,7 +76,7 @@ func createProjectsTable() projectsTable {
 	keys.RowUp.SetKeys("k", "up", "w")
 	keys.Filter.SetKeys("/", "f")
 
-	model := projectsTable{
+	model := tableModel{
 		model: table.New(columns).
 			WithRows(rows).
 			HeaderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff")).Bold(true)).
