@@ -71,22 +71,22 @@ func createProjectsTable() TableModel {
 	columns := generateColumns()
 	rows := generateRowsFromProjects(&[]Project{})
 
-	keys := table.DefaultKeyMap()
-	keys.RowDown.SetKeys("j", "down")
-	keys.RowUp.SetKeys("k", "up")
-	keys.Filter.SetKeys("/", "f")
+	tableKeys := table.DefaultKeyMap()
+	tableKeys.RowDown.SetKeys(mainKeys.Down.Keys()...)
+	tableKeys.RowUp.SetKeys(mainKeys.Up.Keys()...)
+	tableKeys.Filter.SetKeys(mainKeys.Filter.Keys()...)
 
 	model := TableModel{
 		model: table.New(columns).
 			WithRows(rows).
 			HeaderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff")).Bold(true)).
 			SelectableRows(true).
-			WithSelectedText("   ", " * ").
+			WithSelectedText("   ", " • ").
 			Filtered(true).
 			Focused(true).
 			BorderRounded().
 			SortByAsc(columnLastModified).
-			WithKeyMap(keys).
+			WithKeyMap(tableKeys).
 			WithTargetWidth(100).
 			WithMaxTotalWidth(200).
 			WithMultiline(true).

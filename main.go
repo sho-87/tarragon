@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -24,6 +26,8 @@ type MainModel struct {
 	projects  []Project
 	err       error
 	message   string
+	keys      KeyMap
+	help      help.Model
 }
 
 type UpdatePlanMsg Project
@@ -39,7 +43,7 @@ func initialModel() MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
 	table := createProjectsTable()
-	return MainModel{table: table, spinner: s, progress: progress.New(progress.WithDefaultGradient()), working: false}
+	return MainModel{table: table, keys: mainKeys, help: help.New(), spinner: s, progress: progress.New(progress.WithDefaultGradient()), working: false}
 }
 
 func (m MainModel) Init() tea.Cmd {
@@ -91,17 +95,19 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, tea.Quit)
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
+		switch {
+		case key.Matches(msg, m.keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
+		case key.Matches(msg, m.keys.Quit):
 			cmds = append(cmds, tea.Quit)
-		case "r":
+		case key.Matches(msg, m.keys.Refresh):
 			m.working = true
 			cmds = append(cmds, m.spinner.Tick, refreshProjects)
-		case "p":
+		case key.Matches(msg, m.keys.PlanHighlighted):
 			m.working = true
 			m.message = fmt.Sprintf("Terraform Plan: %s", project.Name)
 			cmds = append(cmds, m.spinner.Tick, updatePlan(highlightedProject))
-		case "P":
+		case key.Matches(msg, m.keys.PlanSelected):
 			m.working = true
 			m.message = "Terraform Plan: selected projects"
 
@@ -112,12 +118,12 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				batchArgs = append(batchArgs, updatePlan(project))
 			}
 			cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
-		case "s":
+		case key.Matches(msg, m.keys.SelectAll):
 			rows := m.table.model.GetVisibleRows()
 			for i, row := range rows {
 				rows[i] = row.Selected(true)
 			}
-		case "d":
+		case key.Matches(msg, m.keys.DeselectAll):
 			m.table.model.WithAllRowsDeselected()
 		}
 	}
@@ -148,7 +154,9 @@ func (m MainModel) View() string {
 		progress = ""
 	}
 
-	return body.String() + working + progress
+	helpView := m.help.View(m.keys)
+
+	return body.String() + working + progress + strings.Repeat("\n", 10) + helpView
 }
 
 func main() {
