@@ -35,11 +35,6 @@ func (e ErrMsg) Error() string {
 	return e.err.Error()
 }
 
-const (
-	progressPadding  = 2
-	progressMaxWidth = 80
-)
-
 func initialModel() MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
@@ -63,12 +58,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.progress.Width = msg.Width - progressPadding*2 - 4
-		if m.progress.Width > progressMaxWidth {
-			m.progress.Width = progressMaxWidth
-		}
-
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		if m.working {

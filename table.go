@@ -89,7 +89,6 @@ func createProjectsTable() TableModel {
 			WithKeyMap(keys).
 			WithTargetWidth(100).
 			WithMaxTotalWidth(200).
-			WithPageSize(10).
 			WithMultiline(true).
 			WithBaseStyle(
 				lipgloss.NewStyle().
