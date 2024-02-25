@@ -89,7 +89,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case UpdatePlanMsg:
 		m.message = fmt.Sprintf("Updated %s", msg.Name)
 		m.table.updateData(&m.projects)
-		cmd := m.progress.IncrPercent(float64(1) / float64(len(m.projects)))
+		cmd := m.progress.IncrPercent(float64(1) / float64(len(m.table.model.SelectedRows())))
 		cmds = append(cmds, cmd)
 
 	case UpdatesFinishedMsg:
@@ -114,17 +114,22 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.spinner.Tick, updatePlan(highlightedProject))
 		case "P":
 			m.working = true
-			m.message = "Terraform Plan: all projects"
+			m.message = "Terraform Plan: selected projects"
 
 			var batchArgs []tea.Cmd
 			batchArgs = append(batchArgs, m.spinner.Tick)
-			for i := range len(m.projects) {
-				batchArgs = append(batchArgs, updatePlan(&m.projects[i]))
+			for _, row := range m.table.model.SelectedRows() {
+				project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
+				batchArgs = append(batchArgs, updatePlan(project))
 			}
 			cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
 		case "s":
-			m.working = !m.working
-			cmds = append(cmds, m.spinner.Tick)
+			rows := m.table.model.GetVisibleRows()
+			for i, row := range rows {
+				rows[i] = row.Selected(true)
+			}
+		case "d":
+			m.table.model.WithAllRowsDeselected()
 		}
 	}
 
