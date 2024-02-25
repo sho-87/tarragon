@@ -5,6 +5,7 @@ import (
 )
 
 type KeyMap struct {
+	ToggleOutput    key.Binding
 	Help            key.Binding
 	Quit            key.Binding
 	Up              key.Binding
@@ -19,6 +20,10 @@ type KeyMap struct {
 }
 
 var mainKeys = KeyMap{
+	ToggleOutput: key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "toggle output"),
+	),
 	Help: key.NewBinding(
 		key.WithKeys("?"),
 		key.WithHelp("?", "help"),
@@ -74,7 +79,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.PlanHighlighted},
 		{k.PlanSelected},
 		{k.Select, k.SelectAll, k.DeselectAll},
-		{k.Refresh, k.Filter},
+		{k.ToggleOutput, k.Refresh, k.Filter},
 		{k.Help, k.Quit},
 	}
 }

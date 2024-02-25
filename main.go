@@ -17,17 +17,25 @@ import (
 var Debug bool = false
 var SearchPath string
 
+type State int
+
+const (
+	tableView State = iota
+	outputView
+)
+
 type MainModel struct {
-	table     TableModel
-	altscreen bool
-	spinner   spinner.Model
-	progress  progress.Model
-	working   bool
-	projects  []Project
-	err       error
-	message   string
-	keys      KeyMap
-	help      help.Model
+	state    State
+	table    TableModel
+	output   OutputModel
+	projects []Project
+	spinner  spinner.Model
+	progress progress.Model
+	working  bool
+	err      error
+	message  string
+	keys     KeyMap
+	help     help.Model
 }
 
 type UpdatePlanMsg Project
@@ -43,7 +51,16 @@ func initialModel() MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
 	table := createProjectsTable()
-	return MainModel{table: table, keys: mainKeys, help: help.New(), spinner: s, progress: progress.New(progress.WithDefaultGradient()), working: false}
+	main := MainModel{
+		state:    tableView,
+		table:    table,
+		keys:     mainKeys,
+		help:     help.New(),
+		spinner:  s,
+		progress: progress.New(progress.WithDefaultGradient()),
+		working:  false,
+	}
+	return main
 }
 
 func (m MainModel) Init() tea.Cmd {
@@ -51,112 +68,133 @@ func (m MainModel) Init() tea.Cmd {
 }
 
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var (
-		cmd  tea.Cmd
-		cmds []tea.Cmd
-	)
-	m.table.updateFooter()
-	m.table.model, cmd = m.table.model.Update(msg)
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
 	project, _ := m.table.model.HighlightedRow().Data[columnProject].(Project)
 	highlightedProject := matchProjectInMemory(project.Path, &m.projects)
-	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		if m.working {
-			m.spinner, cmd = m.spinner.Update(msg)
-		}
-		cmds = append(cmds, cmd)
-
-	case progress.FrameMsg:
-		progressModel, cmd := m.progress.Update(msg)
-		m.progress = progressModel.(progress.Model)
-		cmds = append(cmds, cmd)
-
-	case RefreshFinishedMsg:
-		m.projects = msg
-		m.working = false
-		m.table.updateData(&m.projects)
-
-	case UpdatePlanMsg:
-		m.message = fmt.Sprintf("Updated %s", msg.Name)
-		m.table.updateData(&m.projects)
-		cmd := m.progress.IncrPercent(float64(1) / float64(len(m.table.model.SelectedRows())))
-		cmds = append(cmds, cmd)
-
-	case UpdatesFinishedMsg:
-		m.working = false
-		m.message = string(msg)
-
 	case ErrMsg:
 		m.err = msg
 		fmt.Printf("Error: %v\n", msg)
 		cmds = append(cmds, tea.Quit)
-
 	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, m.keys.Help):
-			m.help.ShowAll = !m.help.ShowAll
-		case key.Matches(msg, m.keys.Quit):
-			cmds = append(cmds, tea.Quit)
-		case key.Matches(msg, m.keys.Refresh):
-			m.working = true
-			cmds = append(cmds, m.spinner.Tick, refreshProjects)
-		case key.Matches(msg, m.keys.PlanHighlighted):
-			m.working = true
-			m.message = fmt.Sprintf("Terraform Plan: %s", project.Name)
-			cmds = append(cmds, m.spinner.Tick, updatePlan(highlightedProject))
-		case key.Matches(msg, m.keys.PlanSelected):
-			m.working = true
-			m.message = "Terraform Plan: selected projects"
-
-			var batchArgs []tea.Cmd
-			batchArgs = append(batchArgs, m.spinner.Tick)
-			for _, row := range m.table.model.SelectedRows() {
-				project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
-				batchArgs = append(batchArgs, updatePlan(project))
+		if key.Matches(msg, m.keys.ToggleOutput) {
+			if m.state == outputView {
+				m.state = tableView
+			} else {
+				m.output = OutputModel{title: highlightedProject.Name, content: "Loading...", width: 90, height: 30}
+				m.state = outputView
 			}
-			cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
-		case key.Matches(msg, m.keys.SelectAll):
-			rows := m.table.model.GetVisibleRows()
-			for i, row := range rows {
-				rows[i] = row.Selected(true)
-			}
-		case key.Matches(msg, m.keys.DeselectAll):
-			m.table.model.WithAllRowsDeselected()
 		}
+	}
+
+	switch m.state {
+	case tableView:
+		m.table.updateFooter()
+		m.table.model, cmd = m.table.model.Update(msg)
+		cmds = append(cmds, cmd)
+
+		switch msg := msg.(type) {
+		case spinner.TickMsg:
+			var cmd tea.Cmd
+			if m.working {
+				m.spinner, cmd = m.spinner.Update(msg)
+			}
+			cmds = append(cmds, cmd)
+
+		case progress.FrameMsg:
+			progressModel, cmd := m.progress.Update(msg)
+			m.progress = progressModel.(progress.Model)
+			cmds = append(cmds, cmd)
+
+		case RefreshFinishedMsg:
+			m.projects = msg
+			m.working = false
+			m.table.updateData(&m.projects)
+
+		case UpdatePlanMsg:
+			m.message = fmt.Sprintf("Updated %s", msg.Name)
+			m.table.updateData(&m.projects)
+			cmd := m.progress.IncrPercent(float64(1) / float64(len(m.table.model.SelectedRows())))
+			cmds = append(cmds, cmd)
+
+		case UpdatesFinishedMsg:
+			m.working = false
+			m.message = string(msg)
+
+		case tea.KeyMsg:
+			switch {
+			case key.Matches(msg, m.keys.Help):
+				m.help.ShowAll = !m.help.ShowAll
+			case key.Matches(msg, m.keys.Quit):
+				cmds = append(cmds, tea.Quit)
+			case key.Matches(msg, m.keys.Refresh):
+				m.working = true
+				cmds = append(cmds, m.spinner.Tick, refreshProjects)
+			case key.Matches(msg, m.keys.PlanHighlighted):
+				m.working = true
+				m.message = fmt.Sprintf("Terraform Plan: %s", project.Name)
+				cmds = append(cmds, m.spinner.Tick, updatePlan(highlightedProject))
+			case key.Matches(msg, m.keys.PlanSelected):
+				m.working = true
+				m.message = "Terraform Plan: selected projects"
+
+				var batchArgs []tea.Cmd
+				batchArgs = append(batchArgs, m.spinner.Tick)
+				for _, row := range m.table.model.SelectedRows() {
+					project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
+					batchArgs = append(batchArgs, updatePlan(project))
+				}
+				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
+			case key.Matches(msg, m.keys.SelectAll):
+				rows := m.table.model.GetVisibleRows()
+				for i, row := range rows {
+					rows[i] = row.Selected(true)
+				}
+			case key.Matches(msg, m.keys.DeselectAll):
+				m.table.model.WithAllRowsDeselected()
+			}
+		}
+
+	case outputView:
+		m.output, cmd = m.output.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
 	return m, tea.Batch(cmds...)
 }
 
 func (m MainModel) View() string {
-	if m.err != nil {
-		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
+	var output string
+
+	switch m.state {
+	case tableView:
+		body := strings.Builder{}
+		body.WriteString(m.table.model.View())
+		body.WriteString("\n")
+
+		var working string
+		if m.working {
+			working = fmt.Sprintf("\n   %s %s...\n\n", m.spinner.View(), m.message)
+		} else {
+			working = ""
+		}
+
+		var progress string
+		if m.progress.Percent() > 0 && m.progress.Percent() < 1 {
+			progress = fmt.Sprintf("\n%s\n", m.progress.View())
+		} else {
+			progress = ""
+		}
+
+		helpView := m.help.View(m.keys)
+
+		output = body.String() + working + progress + strings.Repeat("\n", 10) + helpView
+	case outputView:
+		output = m.output.View()
 	}
-
-	body := strings.Builder{}
-	body.WriteString(m.table.model.View())
-	body.WriteString("\n")
-
-	var working string
-	if m.working {
-		working = fmt.Sprintf("\n   %s %s...\n\n", m.spinner.View(), m.message)
-	} else {
-		working = ""
-	}
-
-	var progress string
-	if m.progress.Percent() > 0 && m.progress.Percent() < 1 {
-		progress = fmt.Sprintf("\n%s\n", m.progress.View())
-	} else {
-		progress = ""
-	}
-
-	helpView := m.help.View(m.keys)
-
-	return body.String() + working + progress + strings.Repeat("\n", 10) + helpView
+	return output
 }
 
 func main() {
@@ -180,7 +218,7 @@ func main() {
 		defer f.Close()
 	}
 
-	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen(), tea.WithMouseCellMotion())
 	_, runErr := p.Run()
 	if runErr != nil {
 		fmt.Printf("Uh oh, there was an error: %v\n", err)
