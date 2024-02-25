@@ -98,7 +98,7 @@ func TestFindProjects(t *testing.T) {
 	})
 }
 
-func assertSameDirectories(t *testing.T, got, want []fs.DirEntry) {
+func assertSameDirectories(t *testing.T, got []Project, want []fs.DirEntry) {
 	t.Helper()
 
 	if len(got) != len(want) {
@@ -106,7 +106,7 @@ func assertSameDirectories(t *testing.T, got, want []fs.DirEntry) {
 	}
 
 	for i := range got {
-		if got[i].Name() != want[i].Name() {
+		if got[i].Name != want[i].Name() {
 			t.Errorf("got %v, want %v", got[i], want[i])
 		}
 	}

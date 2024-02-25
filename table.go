@@ -72,8 +72,8 @@ func createProjectsTable() tableModel {
 	rows := generateRowsFromProjects(&[]Project{})
 
 	keys := table.DefaultKeyMap()
-	keys.RowDown.SetKeys("j", "down", "s")
-	keys.RowUp.SetKeys("k", "up", "w")
+	keys.RowDown.SetKeys("j", "down")
+	keys.RowUp.SetKeys("k", "up")
 	keys.Filter.SetKeys("/", "f")
 
 	model := tableModel{
