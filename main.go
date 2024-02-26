@@ -64,7 +64,7 @@ func initialModel() MainModel {
 }
 
 func (m MainModel) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, refreshProjects)
+	return tea.Batch(tea.SetWindowTitle("tarragon"), m.spinner.Tick, refreshProjects)
 }
 
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -218,7 +218,11 @@ func main() {
 		defer f.Close()
 	}
 
-	p := tea.NewProgram(initialModel(), tea.WithAltScreen(), tea.WithMouseCellMotion())
+	p := tea.NewProgram(
+		initialModel(),
+		tea.WithAltScreen(),
+		tea.WithMouseCellMotion(),
+	)
 	_, runErr := p.Run()
 	if runErr != nil {
 		fmt.Printf("Uh oh, there was an error: %v\n", err)
