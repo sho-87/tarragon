@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/evertras/bubble-table/table"
@@ -25,11 +24,6 @@ func (m *TableModel) updateData(projects *[]Project) {
 	// FIXME: selected rows are lost when updating the table because all rows are replaced
 	// FIXME: clearing a filter currently doesnt update the table to show all rows
 	// https://github.com/Evertras/bubble-table/issues/136
-	if Debug {
-		for i := range *projects {
-			log.Printf("updateData: %p", &(*projects)[i])
-		}
-	}
 	m.model = m.model.WithRows(generateRowsFromProjects(projects))
 	m.updateFooter()
 }
@@ -115,32 +109,23 @@ func generateColumns() []table.Column {
 }
 
 func generateRowsFromProjects(projects *[]Project) []table.Row {
-	if Debug {
-		for i := range *projects {
-			log.Printf("generateRowsFromProjects: %p", &(*projects)[i])
-		}
-	}
-
 	errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000"))
 	pathStyle := lipgloss.NewStyle().Italic(true).Faint(true)
 
 	rows := []table.Row{}
 	for i := range *projects {
-		if Debug {
-			log.Printf("generateRowsFromProjects: %v", (*projects)[i])
-		}
-
+		// FIXME: fix this mess
 		addText := fmt.Sprint((*projects)[i].TerraformPlan.Add)
-		if (*projects)[i].TerraformPlan.Add == -1 {
-			addText = errorStyle.Render("Error")
-		}
 		changeText := fmt.Sprint((*projects)[i].TerraformPlan.Change)
-		if (*projects)[i].TerraformPlan.Change == -1 {
-			changeText = errorStyle.Render("Error")
-		}
 		destroyText := fmt.Sprint((*projects)[i].TerraformPlan.Destroy)
-		if (*projects)[i].TerraformPlan.Destroy == -1 {
+		if addText == PlanError.String() || changeText == PlanError.String() || destroyText == PlanError.String() {
+			addText = errorStyle.Render("Error")
+			changeText = errorStyle.Render("Error")
 			destroyText = errorStyle.Render("Error")
+		} else if addText == DriftError.String() || changeText == DriftError.String() || destroyText == DriftError.String() {
+			addText = errorStyle.Render("Drift")
+			changeText = errorStyle.Render("Drift")
+			destroyText = errorStyle.Render("Drift")
 		}
 
 		row := table.NewRow(table.RowData{

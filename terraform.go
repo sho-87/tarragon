@@ -2,8 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,6 +22,21 @@ const (
 	Plan     TerraformCommand = "plan"
 	Validate TerraformCommand = "validate"
 	Apply    TerraformCommand = "apply"
+)
+
+type TerraformError int
+
+func (e TerraformError) Value() int {
+	return int(e)
+}
+
+func (e TerraformError) String() string {
+	return fmt.Sprint(e.Value())
+}
+
+const (
+	PlanError  TerraformError = -1
+	DriftError TerraformError = -2
 )
 
 type TerraformChanges struct {
@@ -38,34 +56,39 @@ type ChangeSummary struct {
 	Remove int `json:"remove"`
 }
 
+type RegexMatchError struct {
+	Message string
+}
+
+func (e RegexMatchError) Error() string {
+	return e.Message
+}
+
 func updatesFinished() tea.Msg {
 	return UpdatesFinishedMsg("Projects updated")
 }
 
 func updatePlan(project *Project) tea.Cmd {
-	if Debug {
-		log.Printf("updatePlan: %p", project)
-	}
-
 	return func() tea.Msg {
 		output := runTerraformCommand(project.Path, Plan)
 		parsedPlan := parsePlanOutput(output)
 		project.TerraformPlan = parsedPlan
+		project.Output = output
 
 		return UpdatePlanMsg(*project)
 	}
 }
 
 func runTerraformCommand(dir string, command TerraformCommand) string {
-	cmd := exec.Command("terraform", command.String(), "--json")
+	cmd := exec.Command("terraform", command.String())
 	cmd.Dir = dir
 
-	// terraform plan errors also go to stdout and we want to capture those when parsing the plan output instead of here
 	out, _ := cmd.CombinedOutput()
 	return string(out)
 }
 
-func parsePlanOutput(output string) TerraformChanges {
+func parsePlanOutputJSON(output string) TerraformChanges {
+	// Deprecated.
 	logBuffer := []PlanLogEntry{}
 	for _, line := range strings.Split(output, "\n") {
 		var entry PlanLogEntry
@@ -82,12 +105,54 @@ func parsePlanOutput(output string) TerraformChanges {
 		entry := logBuffer[i]
 
 		if entry.Level == "error" {
-			return TerraformChanges{-1, -1, -1}
+			return TerraformChanges{PlanError.Value(), PlanError.Value(), PlanError.Value()}
 		} else if entry.Level == "info" && entry.Changes != (ChangeSummary{}) {
 			changes := entry.Changes
 			return TerraformChanges{changes.Add, changes.Change, changes.Remove}
 		}
 	}
 
-	return TerraformChanges{0, 0, 0}
+	return TerraformChanges{PlanError.Value(), PlanError.Value(), PlanError.Value()}
+}
+
+func parsePlanOutput(output string) TerraformChanges {
+	switch {
+	case strings.Contains(output, "Error:"):
+		return TerraformChanges{PlanError.Value(), PlanError.Value(), PlanError.Value()}
+	case strings.Contains(output, "Objects have changed outside of Terraform"):
+		return TerraformChanges{DriftError.Value(), DriftError.Value(), DriftError.Value()}
+	case strings.Contains(output, "No changes."):
+		return TerraformChanges{0, 0, 0}
+	default:
+		changes, err := regexMatchChanges(output)
+		if err != nil {
+			if Debug {
+				log.Printf("Error parsing plan output: %s", err)
+			}
+			panic(err)
+		}
+		return changes
+	}
+}
+
+func regexMatchChanges(output string) (TerraformChanges, error) {
+	output = removeANSIEscapeCodes(output)
+	re := regexp.MustCompile(`Plan: (\d+) to add, (\d+) to change, (\d+) to destroy.`)
+	matches := re.FindStringSubmatch(output)
+
+	if len(matches) == 4 {
+		add, errAdd := strconv.Atoi(matches[1])
+		change, errChange := strconv.Atoi(matches[2])
+		destroy, errDestroy := strconv.Atoi(matches[3])
+
+		if errAdd == nil && errChange == nil && errDestroy == nil {
+			return TerraformChanges{Add: add, Change: change, Destroy: destroy}, nil
+		}
+	}
+	return TerraformChanges{}, RegexMatchError{output}
+}
+
+func removeANSIEscapeCodes(input string) string {
+	re := regexp.MustCompile(`\x1b\[[0-9;]*[mGKHF]`)
+	return re.ReplaceAllString(input, "")
 }
