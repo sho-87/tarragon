@@ -3,18 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/evertras/bubble-table/table"
 )
-
-type Project struct {
-	Name          string
-	Path          string
-	LastModified  time.Time
-	TerraformPlan TerraformChanges
-}
 
 type TableModel struct {
 	model table.Model

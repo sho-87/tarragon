@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -36,6 +37,14 @@ type MainModel struct {
 	message  string
 	keys     KeyMap
 	help     help.Model
+}
+
+type Project struct {
+	Name          string
+	Path          string
+	LastModified  time.Time
+	Output        string
+	TerraformPlan TerraformChanges
 }
 
 type UpdatePlanMsg Project
