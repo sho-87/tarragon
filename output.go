@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wordwrap"
 )
 
 var titleStyle = lipgloss.NewStyle().
@@ -33,21 +34,25 @@ func (m OutputModel) Init() tea.Cmd {
 func (m OutputModel) Update(msg tea.Msg) (OutputModel, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
+
 	headerHeight := lipgloss.Height(m.headerView())
 	footerHeight := lipgloss.Height(m.footerView())
 	verticalMarginHeight := headerHeight + footerHeight
 
 	m.viewport = viewport.New(m.width, m.height-verticalMarginHeight)
-	m.viewport.YPosition = headerHeight
-	m.viewport.SetContent(m.content)
+	m.viewport.YPosition = headerHeight + 1
+	m.viewport.SetContent(wordwrap.String(m.content, m.width))
 
+	// Handle keyboard and mouse events in the viewport
 	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
+
 	return m, tea.Batch(cmds...)
 }
 
 func (m OutputModel) View() string {
-	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
+	return fmt.Sprintf(m.viewport.View())
+	// return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
 }
 
 func (m OutputModel) headerView() string {

@@ -92,7 +92,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.state == outputView {
 				m.state = tableView
 			} else {
-				m.output = OutputModel{title: highlightedProject.Name, content: "Loading...", width: 90, height: 30}
+				m.output = OutputModel{title: highlightedProject.Name, content: highlightedProject.Output, width: 90, height: 40}
 				m.state = outputView
 			}
 		}
