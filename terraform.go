@@ -85,8 +85,8 @@ func runPlan(project *Project) tea.Cmd {
 	return func() tea.Msg {
 		output := executeTerraformCommand(project.Path, Plan)
 		parsedPlan := parsePlanOutput(output)
-		project.TerraformPlan = parsedPlan
-		project.Output = output
+		project.PlanChanges = parsedPlan
+		project.PlanOutput = output
 
 		return UpdatePlanMsg(*project)
 	}
@@ -95,7 +95,7 @@ func runPlan(project *Project) tea.Cmd {
 func runApply(project *Project) tea.Cmd {
 	return func() tea.Msg {
 		executeTerraformCommand(project.Path, Apply)
-		project.TerraformPlan = TerraformChanges{0, 0, 0}
+		project.PlanChanges = TerraformChanges{0, 0, 0}
 		return UpdateApplyMsg(*project)
 	}
 }

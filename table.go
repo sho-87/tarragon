@@ -102,9 +102,9 @@ func generateRowsFromProjects(projects *[]Project) []table.Row {
 	rows := []table.Row{}
 	for i := range *projects {
 		// FIXME: fix this mess
-		addText := fmt.Sprint((*projects)[i].TerraformPlan.Add)
-		changeText := fmt.Sprint((*projects)[i].TerraformPlan.Change)
-		destroyText := fmt.Sprint((*projects)[i].TerraformPlan.Destroy)
+		addText := fmt.Sprint((*projects)[i].PlanChanges.Add)
+		changeText := fmt.Sprint((*projects)[i].PlanChanges.Change)
+		destroyText := fmt.Sprint((*projects)[i].PlanChanges.Destroy)
 		if addText == PlanError.String() || changeText == PlanError.String() || destroyText == PlanError.String() {
 			addText = errorStyle.Render("Error")
 			changeText = errorStyle.Render("Error")

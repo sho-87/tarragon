@@ -52,7 +52,7 @@ func findAllTerraformProjects(filesystem fs.FS) ([]Project, error) {
 				Name:         d.Name(),
 				Path:         filepath.Join(SearchPath, path),
 				LastModified: info.ModTime(),
-				Output:       "Run Terraform plan to view output",
+				PlanOutput:   "Run Terraform plan to view output",
 				Valid:        "?",
 			}
 			projects = append(projects, project)

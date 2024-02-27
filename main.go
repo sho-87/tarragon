@@ -47,12 +47,12 @@ type MainModel struct {
 }
 
 type Project struct {
-	Name          string
-	Path          string
-	LastModified  time.Time
-	Output        string
-	TerraformPlan TerraformChanges
-	Valid         string
+	Name         string
+	Path         string
+	LastModified time.Time
+	PlanOutput   string
+	PlanChanges  TerraformChanges
+	Valid        string
 }
 
 type UpdateValidateMsg Project
