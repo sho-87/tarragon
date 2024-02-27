@@ -67,11 +67,11 @@ func createProjectsTable() TableModel {
 			WithRows(rows).
 			HeaderStyle(tableHeader).
 			SelectableRows(true).
-			WithSelectedText("   ", " • ").
+			WithSelectedText("     ", "  •  ").
 			Filtered(true).
 			Focused(true).
 			BorderRounded().
-			SortByAsc(columnLastModified).
+			SortByAsc(columnName).
 			WithKeyMap(tableKeys).
 			WithTargetWidth(winSize.Width).
 			WithPageSize(winSize.Height - 5).
