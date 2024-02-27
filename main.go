@@ -335,23 +335,10 @@ func main() {
 	p := tea.NewProgram(
 		initialModel(),
 		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
 	)
 	_, runErr := p.Run()
 	if runErr != nil {
 		fmt.Printf("Uh oh, there was an error: %v\n", err)
 		os.Exit(1)
 	}
-}
-
-func createConfirmation() *confirmation.Model {
-	text := []string{"Are you sure?", warning.Render("This will apply with auto-approve"), "..."}
-	prompt := confirmation.New(strings.Join(text, " "), confirmation.Undecided)
-	prompt.Template = confirmation.TemplateYN
-	prompt.ResultTemplate = confirmation.ResultTemplateYN
-	prompt.KeyMap.SelectYes = append(prompt.KeyMap.SelectYes, "y")
-	prompt.KeyMap.SelectNo = append(prompt.KeyMap.SelectNo, "n")
-	model := confirmation.NewModel(prompt)
-	model.Init()
-	return model
 }
