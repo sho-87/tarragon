@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/erikgeiser/promptkit/confirmation"
 	tsize "github.com/kopoli/go-terminal-size"
 )
 
@@ -26,20 +27,23 @@ type State int
 const (
 	tableView State = iota
 	outputView
+	confirmationView
 )
 
 type MainModel struct {
-	state    State
-	table    TableModel
-	output   OutputModel
-	projects []Project
-	spinner  spinner.Model
-	progress progress.Model
-	working  bool
-	err      error
-	message  string
-	keys     KeyMap
-	help     help.Model
+	state        State
+	table        TableModel
+	output       OutputModel
+	confirmation *confirmation.Model
+	task         func(*MainModel) tea.Cmd
+	projects     []Project
+	spinner      spinner.Model
+	progress     progress.Model
+	working      bool
+	err          error
+	message      string
+	keys         KeyMap
+	help         help.Model
 }
 
 type Project struct {
@@ -66,14 +70,16 @@ func initialModel() MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
 	table := createProjectsTable()
+
 	main := MainModel{
-		state:    tableView,
-		table:    table,
-		keys:     mainKeys,
-		help:     help.New(),
-		spinner:  s,
-		progress: progress.New(progress.WithDefaultGradient()),
-		working:  false,
+		state:        tableView,
+		table:        table,
+		confirmation: createConfirmation(),
+		keys:         mainKeys,
+		help:         help.New(),
+		spinner:      s,
+		progress:     progress.New(progress.WithDefaultGradient()),
+		working:      false,
 	}
 	return main
 }
@@ -197,21 +203,24 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
 
 			case key.Matches(msg, m.keys.ApplyHighlighted):
-				m.working = true
-				m.message = fmt.Sprintf("Terraform Apply: %s", project.Name)
-				cmds = append(cmds, m.spinner.Tick, runApply(highlightedProject))
+				m.task = func(m *MainModel) tea.Cmd {
+					m.message = fmt.Sprintf("Terraform Apply: %s", project.Name)
+					return runApply(highlightedProject)
+				}
+				m.state = confirmationView
 
 			case key.Matches(msg, m.keys.ApplySelected):
-				m.working = true
-				m.message = "Terraform Apply: selected projects"
+				m.task = func(m *MainModel) tea.Cmd {
+					m.message = "Terraform Apply: selected projects"
 
-				var batchArgs []tea.Cmd
-				batchArgs = append(batchArgs, m.spinner.Tick)
-				for _, row := range m.table.model.SelectedRows() {
-					project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
-					batchArgs = append(batchArgs, runApply(project))
+					var batchArgs []tea.Cmd
+					for _, row := range m.table.model.SelectedRows() {
+						project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
+						batchArgs = append(batchArgs, runApply(project))
+					}
+					return tea.Sequence(tea.Batch(batchArgs...), updatesFinished)
 				}
-				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
+				m.state = confirmationView
 
 			case key.Matches(msg, m.keys.SelectAll):
 				rows := m.table.model.GetVisibleRows()
@@ -222,6 +231,27 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case key.Matches(msg, m.keys.DeselectAll):
 				m.table.model.WithAllRowsDeselected()
 			}
+		}
+
+	case confirmationView:
+		msg, _ := msg.(tea.KeyMsg)
+		switch {
+		case key.Matches(msg, m.keys.Cancel):
+			m.state = tableView
+			m.working = false
+
+		case key.Matches(msg, m.keys.No):
+			m.state = tableView
+			m.working = false
+
+		case key.Matches(msg, m.keys.Yes):
+			cmds = append(cmds, m.spinner.Tick, m.task(&m))
+			m.state = tableView
+			m.working = true
+
+		default:
+			_, cmd := m.confirmation.Update(msg)
+			cmds = append(cmds, cmd)
 		}
 
 	case outputView:
@@ -262,6 +292,17 @@ func (m MainModel) View() string {
 		paddingHeight := winSize.Height - contentHeight
 
 		output = body.String() + working + progress + strings.Repeat("\n", paddingHeight) + helpView
+
+	case confirmationView:
+		body := strings.Builder{}
+		body.WriteString(m.table.model.View())
+		body.WriteString("\n")
+		confirm := m.confirmation.View()
+		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(confirm)
+		paddingHeight := winSize.Height - contentHeight
+
+		output = body.String() + strings.Repeat("\n", paddingHeight) + confirm
+
 	case outputView:
 		output = m.output.View()
 	}
@@ -301,4 +342,17 @@ func main() {
 		fmt.Printf("Uh oh, there was an error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func createConfirmation() *confirmation.Model {
+	warningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#d97d0d"))
+	text := []string{"Are you sure?", warningStyle.Render("This will apply with auto-approve"), "..."}
+	prompt := confirmation.New(strings.Join(text, " "), confirmation.Undecided)
+	prompt.Template = confirmation.TemplateYN
+	prompt.ResultTemplate = confirmation.ResultTemplateYN
+	prompt.KeyMap.SelectYes = append(prompt.KeyMap.SelectYes, "y")
+	prompt.KeyMap.SelectNo = append(prompt.KeyMap.SelectNo, "n")
+	model := confirmation.NewModel(prompt)
+	model.Init()
+	return model
 }

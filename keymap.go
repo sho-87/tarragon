@@ -5,11 +5,14 @@ import (
 )
 
 type KeyMap struct {
+	Cancel              key.Binding
 	ToggleOutput        key.Binding
 	Help                key.Binding
 	Quit                key.Binding
 	Up                  key.Binding
 	Down                key.Binding
+	Yes                 key.Binding
+	No                  key.Binding
 	Filter              key.Binding
 	Refresh             key.Binding
 	Select              key.Binding
@@ -24,6 +27,10 @@ type KeyMap struct {
 }
 
 var mainKeys = KeyMap{
+	Cancel: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "cancel"),
+	),
 	ToggleOutput: key.NewBinding(
 		key.WithKeys("tab"),
 		key.WithHelp("tab", "toggle output"),
@@ -43,6 +50,14 @@ var mainKeys = KeyMap{
 	Down: key.NewBinding(
 		key.WithKeys("j", "down"),
 		key.WithHelp("j/↓", "down"),
+	),
+	Yes: key.NewBinding(
+		key.WithKeys("y"),
+		key.WithHelp("y", "yes"),
+	),
+	No: key.NewBinding(
+		key.WithKeys("n"),
+		key.WithHelp("n", "no"),
 	),
 	Filter: key.NewBinding(
 		key.WithKeys("/"),
