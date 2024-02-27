@@ -345,8 +345,7 @@ func main() {
 }
 
 func createConfirmation() *confirmation.Model {
-	warningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#d97d0d"))
-	text := []string{"Are you sure?", warningStyle.Render("This will apply with auto-approve"), "..."}
+	text := []string{"Are you sure?", warning.Render("This will apply with auto-approve"), "..."}
 	prompt := confirmation.New(strings.Join(text, " "), confirmation.Undecided)
 	prompt.Template = confirmation.TemplateYN
 	prompt.ResultTemplate = confirmation.ResultTemplateYN

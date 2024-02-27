@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/evertras/bubble-table/table"
 )
 
@@ -66,7 +65,7 @@ func createProjectsTable() TableModel {
 	model := TableModel{
 		model: table.New(columns).
 			WithRows(rows).
-			HeaderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff")).Bold(true)).
+			HeaderStyle(tableHeader).
 			SelectableRows(true).
 			WithSelectedText("   ", " • ").
 			Filtered(true).
@@ -77,17 +76,8 @@ func createProjectsTable() TableModel {
 			WithTargetWidth(winSize.Width).
 			WithPageSize(winSize.Height - 5).
 			WithMultiline(false).
-			WithBaseStyle(
-				lipgloss.NewStyle().
-					BorderForeground(lipgloss.Color("#a38")).
-					Foreground(lipgloss.Color("#a7a")).
-					Align(lipgloss.Left),
-			).
-			HighlightStyle(
-				lipgloss.NewStyle().
-					Foreground(lipgloss.Color("#88ff55")).
-					Background(lipgloss.Color("#555055")),
-			),
+			WithBaseStyle(tableBase).
+			HighlightStyle(tableHighlighted),
 	}
 
 	model.updateFooter()
@@ -96,9 +86,7 @@ func createProjectsTable() TableModel {
 
 func generateColumns() []table.Column {
 	columns := []table.Column{
-		table.NewFlexColumn(columnName, "Name", 2).
-			WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("#88f"))).
-			WithFiltered(true),
+		table.NewFlexColumn(columnName, "Name", 2).WithStyle(tableHeaderPrimary).WithFiltered(true),
 		table.NewFlexColumn(columnPath, "Path", 4).WithFiltered(true),
 		table.NewFlexColumn(columnValid, "Valid", 1),
 		table.NewFlexColumn(columnAdd, "Add", 1),
@@ -111,10 +99,6 @@ func generateColumns() []table.Column {
 }
 
 func generateRowsFromProjects(projects *[]Project) []table.Row {
-	successStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00")).Align(lipgloss.Center)
-	errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000")).Align(lipgloss.Center)
-	pathStyle := lipgloss.NewStyle().Italic(true).Faint(true)
-
 	rows := []table.Row{}
 	for i := range *projects {
 		// FIXME: fix this mess
@@ -133,7 +117,7 @@ func generateRowsFromProjects(projects *[]Project) []table.Row {
 
 		var validText string
 		if (*projects)[i].Valid == ConfigValid {
-			validText = successStyle.Render(ConfigValid)
+			validText = success.Render(ConfigValid)
 		} else if (*projects)[i].Valid == ConfigInvalid {
 			validText = errorStyle.Render(ConfigInvalid)
 		} else {
@@ -142,7 +126,7 @@ func generateRowsFromProjects(projects *[]Project) []table.Row {
 
 		row := table.NewRow(table.RowData{
 			columnName:         (*projects)[i].Name,
-			columnPath:         pathStyle.Render((*projects)[i].Path),
+			columnPath:         tablePath.Render((*projects)[i].Path),
 			columnAdd:          addText,
 			columnChange:       changeText,
 			columnDestroy:      destroyText,

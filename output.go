@@ -10,14 +10,6 @@ import (
 	"github.com/muesli/reflow/wordwrap"
 )
 
-var titleStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.RoundedBorder()).
-	Padding(0, 2)
-
-var infoStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.RoundedBorder()).
-	Padding(0, 2).
-	Faint(true)
 
 type OutputModel struct {
 	viewport viewport.Model
@@ -65,13 +57,13 @@ func (m OutputModel) View() string {
 }
 
 func (m OutputModel) headerView() string {
-	title := titleStyle.Render(fmt.Sprintf("Output: %s", m.title))
+	title := outputTitle.Render(fmt.Sprintf("Output: %s", m.title))
 	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Width(title)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
 }
 
 func (m OutputModel) footerView() string {
-	info := infoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
+	info := outputInfo.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
 	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Width(info)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
