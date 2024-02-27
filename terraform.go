@@ -68,10 +68,9 @@ func updatesFinished() tea.Msg {
 	return UpdatesFinishedMsg("Projects updated")
 }
 
-func updateValidate(project *Project) tea.Cmd {
+func runValidate(project *Project) tea.Cmd {
 	return func() tea.Msg {
-		output := runTerraformCommand(project.Path, Validate)
-		project.Output = output
+		output := executeTerraformCommand(project.Path, Validate)
 		if strings.Contains(output, "The configuration is valid") {
 			project.Valid = ConfigValid
 		} else {
@@ -82,9 +81,9 @@ func updateValidate(project *Project) tea.Cmd {
 	}
 }
 
-func updatePlan(project *Project) tea.Cmd {
+func runPlan(project *Project) tea.Cmd {
 	return func() tea.Msg {
-		output := runTerraformCommand(project.Path, Plan)
+		output := executeTerraformCommand(project.Path, Plan)
 		parsedPlan := parsePlanOutput(output)
 		project.TerraformPlan = parsedPlan
 		project.Output = output
@@ -93,8 +92,20 @@ func updatePlan(project *Project) tea.Cmd {
 	}
 }
 
-func runTerraformCommand(dir string, command TerraformCommand) string {
-	cmd := exec.Command("terraform", command.String())
+func runApply(project *Project) tea.Cmd {
+	return func() tea.Msg {
+		executeTerraformCommand(project.Path, Apply)
+		project.TerraformPlan = TerraformChanges{0, 0, 0}
+		return UpdateApplyMsg(*project)
+	}
+}
+
+func executeTerraformCommand(dir string, command TerraformCommand) string {
+	flags := []string{command.String()}
+	if command == Apply {
+		flags = append(flags, "-auto-approve")
+	}
+	cmd := exec.Command("terraform", flags...)
 	cmd.Dir = dir
 
 	out, _ := cmd.CombinedOutput()

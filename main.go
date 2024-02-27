@@ -50,6 +50,7 @@ type Project struct {
 
 type UpdateValidateMsg Project
 type UpdatePlanMsg Project
+type UpdateApplyMsg Project
 type UpdatesFinishedMsg string
 type RefreshFinishedMsg []Project
 type ErrMsg struct{ err error }
@@ -136,6 +137,12 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd := m.progress.IncrPercent(float64(1) / float64(len(m.table.model.SelectedRows())))
 			cmds = append(cmds, cmd)
 
+		case UpdateApplyMsg:
+			m.message = fmt.Sprintf("Applied %s", msg.Name)
+			m.table.updateData(&m.projects)
+			cmd := m.progress.IncrPercent(float64(1) / float64(len(m.table.model.SelectedRows())))
+			cmds = append(cmds, cmd)
+
 		case UpdatesFinishedMsg:
 			m.working = false
 			m.message = string(msg)
@@ -155,7 +162,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case key.Matches(msg, m.keys.ValidateHighlighted):
 				m.working = true
 				m.message = fmt.Sprintf("Terraform Validate: %s", project.Name)
-				cmds = append(cmds, m.spinner.Tick, updateValidate(highlightedProject))
+				cmds = append(cmds, m.spinner.Tick, runValidate(highlightedProject))
 
 			case key.Matches(msg, m.keys.ValidateSelected):
 				m.working = true
@@ -165,14 +172,14 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				batchArgs = append(batchArgs, m.spinner.Tick)
 				for _, row := range m.table.model.SelectedRows() {
 					project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
-					batchArgs = append(batchArgs, updateValidate(project))
+					batchArgs = append(batchArgs, runValidate(project))
 				}
 				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
 
 			case key.Matches(msg, m.keys.PlanHighlighted):
 				m.working = true
 				m.message = fmt.Sprintf("Terraform Plan: %s", project.Name)
-				cmds = append(cmds, m.spinner.Tick, updatePlan(highlightedProject))
+				cmds = append(cmds, m.spinner.Tick, runPlan(highlightedProject))
 
 			case key.Matches(msg, m.keys.PlanSelected):
 				m.working = true
@@ -182,7 +189,24 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				batchArgs = append(batchArgs, m.spinner.Tick)
 				for _, row := range m.table.model.SelectedRows() {
 					project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
-					batchArgs = append(batchArgs, updatePlan(project))
+					batchArgs = append(batchArgs, runPlan(project))
+				}
+				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
+
+			case key.Matches(msg, m.keys.ApplyHighlighted):
+				m.working = true
+				m.message = fmt.Sprintf("Terraform Apply: %s", project.Name)
+				cmds = append(cmds, m.spinner.Tick, runApply(highlightedProject))
+
+			case key.Matches(msg, m.keys.ApplySelected):
+				m.working = true
+				m.message = "Terraform Apply: selected projects"
+
+				var batchArgs []tea.Cmd
+				batchArgs = append(batchArgs, m.spinner.Tick)
+				for _, row := range m.table.model.SelectedRows() {
+					project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
+					batchArgs = append(batchArgs, runApply(project))
 				}
 				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
 
@@ -221,6 +245,7 @@ func (m MainModel) View() string {
 			working = ""
 		}
 
+		// FIXME: broken
 		var progress string
 		if m.progress.Percent() > 0 && m.progress.Percent() < 1 {
 			progress = fmt.Sprintf("\n%s\n", m.progress.View())
@@ -230,7 +255,7 @@ func (m MainModel) View() string {
 
 		helpView := m.help.View(m.keys)
 
-		output = body.String() + working + progress + strings.Repeat("\n", 10) + helpView
+		output = body.String() + working + progress + strings.Repeat("\n", 5) + helpView
 	case outputView:
 		output = m.output.View()
 	}

@@ -19,6 +19,8 @@ type KeyMap struct {
 	PlanSelected        key.Binding
 	ValidateHighlighted key.Binding
 	ValidateSelected    key.Binding
+	ApplyHighlighted    key.Binding
+	ApplySelected       key.Binding
 }
 
 var mainKeys = KeyMap{
@@ -78,16 +80,24 @@ var mainKeys = KeyMap{
 		key.WithKeys("V"),
 		key.WithHelp("V", "validate: selected"),
 	),
+	ApplyHighlighted: key.NewBinding(
+		key.WithKeys("a"),
+		key.WithHelp("a", "apply"),
+	),
+	ApplySelected: key.NewBinding(
+		key.WithKeys("A"),
+		key.WithHelp("A", "apply: selected"),
+	),
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.ValidateHighlighted, k.PlanHighlighted, k.Up, k.Down, k.Help, k.Quit}
+	return []key.Binding{k.ValidateHighlighted, k.PlanHighlighted, k.ApplyHighlighted, k.Up, k.Down, k.Help, k.Quit}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.ValidateHighlighted, k.PlanHighlighted},
-		{k.ValidateSelected, k.PlanSelected},
+		{k.ValidateHighlighted, k.PlanHighlighted, k.ApplyHighlighted},
+		{k.ValidateSelected, k.PlanSelected, k.ApplySelected},
 		{k.Select, k.SelectAll, k.DeselectAll},
 		{k.ToggleOutput, k.Refresh, k.Filter},
 		{k.Help, k.Quit},
