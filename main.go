@@ -13,8 +13,11 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	tsize "github.com/kopoli/go-terminal-size"
 )
 
+var winSize tsize.Size
 var Debug bool = false
 var SearchPath string
 
@@ -95,7 +98,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.state == outputView {
 				m.state = tableView
 			} else {
-				m.output = OutputModel{title: highlightedProject.Name, content: highlightedProject.Output, width: 90, height: 25}
+				m.output = createOutputModel(project.Name, project.Output)
 				m.state = outputView
 			}
 		}
@@ -255,7 +258,10 @@ func (m MainModel) View() string {
 
 		helpView := m.help.View(m.keys)
 
-		output = body.String() + working + progress + strings.Repeat("\n", 5) + helpView
+		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(working) + lipgloss.Height(progress)
+		paddingHeight := winSize.Height - contentHeight
+
+		output = body.String() + working + progress + strings.Repeat("\n", paddingHeight) + helpView
 	case outputView:
 		output = m.output.View()
 	}
@@ -263,6 +269,8 @@ func (m MainModel) View() string {
 }
 
 func main() {
+	winSize, _ = tsize.GetSize()
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		fmt.Printf("Uh oh, there was an error: %v\n", err)

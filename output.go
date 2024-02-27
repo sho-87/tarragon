@@ -27,6 +27,15 @@ type OutputModel struct {
 	content  string
 }
 
+func createOutputModel(title string, content string) OutputModel {
+	return OutputModel{
+		width:   winSize.Width,
+		height:  winSize.Height,
+		title:   title,
+		content: content,
+	}
+}
+
 func (m OutputModel) Init() tea.Cmd {
 	return nil
 }
@@ -56,7 +65,7 @@ func (m OutputModel) View() string {
 }
 
 func (m OutputModel) headerView() string {
-	title := titleStyle.Render("Output: " + m.title)
+	title := titleStyle.Render(fmt.Sprintf("Output: %s", m.title))
 	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Width(title)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
 }

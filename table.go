@@ -74,8 +74,8 @@ func createProjectsTable() TableModel {
 			BorderRounded().
 			SortByAsc(columnLastModified).
 			WithKeyMap(tableKeys).
-			WithTargetWidth(100).
-			WithMaxTotalWidth(200).
+			WithTargetWidth(winSize.Width).
+			WithPageSize(winSize.Height - 5).
 			WithMultiline(false).
 			WithBaseStyle(
 				lipgloss.NewStyle().
@@ -96,15 +96,15 @@ func createProjectsTable() TableModel {
 
 func generateColumns() []table.Column {
 	columns := []table.Column{
-		table.NewFlexColumn(columnName, "Name", 1).
+		table.NewFlexColumn(columnName, "Name", 2).
 			WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("#88f"))).
 			WithFiltered(true),
-		table.NewFlexColumn(columnPath, "Path", 3).WithFiltered(true),
-		table.NewColumn(columnValid, "Valid", 6),
-		table.NewColumn(columnAdd, "Add", 10),
-		table.NewColumn(columnChange, "Change", 10),
-		table.NewColumn(columnDestroy, "Destroy", 10),
-		table.NewColumn(columnLastModified, "Last Modified", 15),
+		table.NewFlexColumn(columnPath, "Path", 4).WithFiltered(true),
+		table.NewFlexColumn(columnValid, "Valid", 1),
+		table.NewFlexColumn(columnAdd, "Add", 1),
+		table.NewFlexColumn(columnChange, "Change", 1),
+		table.NewFlexColumn(columnDestroy, "Destroy", 1),
+		table.NewFlexColumn(columnLastModified, "Last Modified", 3),
 	}
 
 	return columns
