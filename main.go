@@ -70,10 +70,13 @@ func initialModel() MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
 	table := createProjectsTable()
+	output := OutputModel{width: winSize.Width, height: winSize.Height}
+	output.createViewport()
 
 	main := MainModel{
 		state:        tableView,
 		table:        table,
+		output:       output,
 		confirmation: createConfirmation(),
 		keys:         mainKeys,
 		help:         help.New(),
@@ -104,7 +107,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.state == outputView {
 				m.state = tableView
 			} else {
-				m.output = createOutputModel(project.Name, project.Output)
+				m.output.setTitle(project.Name)
+				m.output.viewport.SetContent(project.PlanOutput)
 				m.state = outputView
 			}
 		}
@@ -255,7 +259,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case outputView:
-		m.output, cmd = m.output.Update(msg)
+		m.output.viewport, cmd = m.output.viewport.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 
@@ -304,7 +308,7 @@ func (m MainModel) View() string {
 		output = body.String() + strings.Repeat("\n", paddingHeight) + confirm
 
 	case outputView:
-		output = m.output.View()
+		output = m.output.renderOutput()
 	}
 	return output
 }

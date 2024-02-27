@@ -5,65 +5,41 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/reflow/wordwrap"
 )
 
-
 type OutputModel struct {
-	viewport viewport.Model
 	width    int
 	height   int
 	title    string
-	content  string
+	viewport viewport.Model
 }
 
-func createOutputModel(title string, content string) OutputModel {
-	return OutputModel{
-		width:   winSize.Width,
-		height:  winSize.Height,
-		title:   title,
-		content: content,
-	}
+func (m *OutputModel) createViewport() {
+	vpHeaderHeight := lipgloss.Height(m.outputHeader())
+	vp := viewport.New(m.width, m.height-vpHeaderHeight*2)
+	vp.YPosition = vpHeaderHeight + 1
+	m.viewport = vp
 }
 
-func (m OutputModel) Init() tea.Cmd {
-	return nil
+func (m *OutputModel) setTitle(title string) {
+	m.title = title
 }
 
-func (m OutputModel) Update(msg tea.Msg) (OutputModel, tea.Cmd) {
-	var cmd tea.Cmd
-	var cmds []tea.Cmd
-
-	headerHeight := lipgloss.Height(m.headerView())
-	footerHeight := lipgloss.Height(m.footerView())
-	verticalMarginHeight := headerHeight + footerHeight
-
-	m.viewport = viewport.New(m.width, m.height-verticalMarginHeight)
-	m.viewport.YPosition = headerHeight + 1
-	m.viewport.SetContent(wordwrap.String(m.content, m.width))
-
-	// Handle keyboard and mouse events in the viewport
-	m.viewport, cmd = m.viewport.Update(msg)
-	cmds = append(cmds, cmd)
-
-	return m, tea.Batch(cmds...)
-}
-
-func (m OutputModel) View() string {
-	// return fmt.Sprintf(m.viewport.View())
-	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
-}
-
-func (m OutputModel) headerView() string {
+func (m *OutputModel) outputHeader() string {
 	title := outputTitle.Render(fmt.Sprintf("Output: %s", m.title))
-	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Width(title)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
+	line := strings.Repeat("-", max(0, m.width-lipgloss.Width(title)))
+	header := lipgloss.JoinHorizontal(lipgloss.Center, title, line)
+	return header
 }
 
-func (m OutputModel) footerView() string {
+func (m *OutputModel) outputFooter() string {
 	info := outputInfo.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
-	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Width(info)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
+	line := strings.Repeat("-", max(0, m.width-lipgloss.Width(info)))
+	footer := lipgloss.JoinHorizontal(lipgloss.Center, line, info)
+	return footer
+}
+
+func (m *OutputModel) renderOutput() string {
+	return fmt.Sprintf("%s\n%s\n%s", m.outputHeader(), m.viewport.View(), m.outputFooter())
 }
