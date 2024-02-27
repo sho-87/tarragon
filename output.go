@@ -51,8 +51,8 @@ func (m OutputModel) Update(msg tea.Msg) (OutputModel, tea.Cmd) {
 }
 
 func (m OutputModel) View() string {
-	return fmt.Sprintf(m.viewport.View())
-	// return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
+	// return fmt.Sprintf(m.viewport.View())
+	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
 }
 
 func (m OutputModel) headerView() string {

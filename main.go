@@ -45,8 +45,10 @@ type Project struct {
 	LastModified  time.Time
 	Output        string
 	TerraformPlan TerraformChanges
+	Valid         string
 }
 
+type UpdateValidateMsg Project
 type UpdatePlanMsg Project
 type UpdatesFinishedMsg string
 type RefreshFinishedMsg []Project
@@ -92,7 +94,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.state == outputView {
 				m.state = tableView
 			} else {
-				m.output = OutputModel{title: highlightedProject.Name, content: highlightedProject.Output, width: 90, height: 40}
+				m.output = OutputModel{title: highlightedProject.Name, content: highlightedProject.Output, width: 90, height: 25}
 				m.state = outputView
 			}
 		}
@@ -128,6 +130,12 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd := m.progress.IncrPercent(float64(1) / float64(len(m.table.model.SelectedRows())))
 			cmds = append(cmds, cmd)
 
+		case UpdateValidateMsg:
+			m.message = fmt.Sprintf("Validated %s", msg.Name)
+			m.table.updateData(&m.projects)
+			cmd := m.progress.IncrPercent(float64(1) / float64(len(m.table.model.SelectedRows())))
+			cmds = append(cmds, cmd)
+
 		case UpdatesFinishedMsg:
 			m.working = false
 			m.message = string(msg)
@@ -136,15 +144,36 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch {
 			case key.Matches(msg, m.keys.Help):
 				m.help.ShowAll = !m.help.ShowAll
+
 			case key.Matches(msg, m.keys.Quit):
 				cmds = append(cmds, tea.Quit)
+
 			case key.Matches(msg, m.keys.Refresh):
 				m.working = true
 				cmds = append(cmds, m.spinner.Tick, refreshProjects)
+
+			case key.Matches(msg, m.keys.ValidateHighlighted):
+				m.working = true
+				m.message = fmt.Sprintf("Terraform Validate: %s", project.Name)
+				cmds = append(cmds, m.spinner.Tick, updateValidate(highlightedProject))
+
+			case key.Matches(msg, m.keys.ValidateSelected):
+				m.working = true
+				m.message = "Terraform Validate: selected projects"
+
+				var batchArgs []tea.Cmd
+				batchArgs = append(batchArgs, m.spinner.Tick)
+				for _, row := range m.table.model.SelectedRows() {
+					project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
+					batchArgs = append(batchArgs, updateValidate(project))
+				}
+				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
+
 			case key.Matches(msg, m.keys.PlanHighlighted):
 				m.working = true
 				m.message = fmt.Sprintf("Terraform Plan: %s", project.Name)
 				cmds = append(cmds, m.spinner.Tick, updatePlan(highlightedProject))
+
 			case key.Matches(msg, m.keys.PlanSelected):
 				m.working = true
 				m.message = "Terraform Plan: selected projects"
@@ -156,11 +185,13 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					batchArgs = append(batchArgs, updatePlan(project))
 				}
 				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
+
 			case key.Matches(msg, m.keys.SelectAll):
 				rows := m.table.model.GetVisibleRows()
 				for i, row := range rows {
 					rows[i] = row.Selected(true)
 				}
+
 			case key.Matches(msg, m.keys.DeselectAll):
 				m.table.model.WithAllRowsDeselected()
 			}

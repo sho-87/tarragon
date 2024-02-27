@@ -50,6 +50,7 @@ const (
 	columnChange       = "Change"
 	columnDestroy      = "Destroy"
 	columnLastModified = "LastModified"
+	columnValid        = "Valid"
 	columnProject      = "Project"
 )
 
@@ -75,7 +76,7 @@ func createProjectsTable() TableModel {
 			WithKeyMap(tableKeys).
 			WithTargetWidth(100).
 			WithMaxTotalWidth(200).
-			WithMultiline(true).
+			WithMultiline(false).
 			WithBaseStyle(
 				lipgloss.NewStyle().
 					BorderForeground(lipgloss.Color("#a38")).
@@ -99,17 +100,19 @@ func generateColumns() []table.Column {
 			WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("#88f"))).
 			WithFiltered(true),
 		table.NewFlexColumn(columnPath, "Path", 3).WithFiltered(true),
+		table.NewColumn(columnValid, "Valid", 6),
 		table.NewColumn(columnAdd, "Add", 10),
 		table.NewColumn(columnChange, "Change", 10),
 		table.NewColumn(columnDestroy, "Destroy", 10),
-		table.NewColumn(columnLastModified, "Last Modified", 20),
+		table.NewColumn(columnLastModified, "Last Modified", 15),
 	}
 
 	return columns
 }
 
 func generateRowsFromProjects(projects *[]Project) []table.Row {
-	errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000"))
+	successStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00")).Align(lipgloss.Center)
+	errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000")).Align(lipgloss.Center)
 	pathStyle := lipgloss.NewStyle().Italic(true).Faint(true)
 
 	rows := []table.Row{}
@@ -128,12 +131,22 @@ func generateRowsFromProjects(projects *[]Project) []table.Row {
 			destroyText = errorStyle.Render("Drift")
 		}
 
+		var validText string
+		if (*projects)[i].Valid == ConfigValid {
+			validText = successStyle.Render(ConfigValid)
+		} else if (*projects)[i].Valid == ConfigInvalid {
+			validText = errorStyle.Render(ConfigInvalid)
+		} else {
+			validText = ConfigUnknown
+		}
+
 		row := table.NewRow(table.RowData{
 			columnName:         (*projects)[i].Name,
 			columnPath:         pathStyle.Render((*projects)[i].Path),
 			columnAdd:          addText,
 			columnChange:       changeText,
 			columnDestroy:      destroyText,
+			columnValid:        validText,
 			columnLastModified: (*projects)[i].LastModified.Format("2006-01-02 15:04:05"),
 			columnProject:      (*projects)[i],
 		})

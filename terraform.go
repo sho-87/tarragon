@@ -12,17 +12,22 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+const (
+	Plan          TerraformCommand = "plan"
+	Validate      TerraformCommand = "validate"
+	Apply         TerraformCommand = "apply"
+	PlanError     TerraformError   = -1
+	DriftError    TerraformError   = -2
+	ConfigValid   string           = "✓"
+	ConfigInvalid string           = "✗"
+	ConfigUnknown string           = "?"
+)
+
 type TerraformCommand string
 
 func (c TerraformCommand) String() string {
 	return string(c)
 }
-
-const (
-	Plan     TerraformCommand = "plan"
-	Validate TerraformCommand = "validate"
-	Apply    TerraformCommand = "apply"
-)
 
 type TerraformError int
 
@@ -33,11 +38,6 @@ func (e TerraformError) Value() int {
 func (e TerraformError) String() string {
 	return fmt.Sprint(e.Value())
 }
-
-const (
-	PlanError  TerraformError = -1
-	DriftError TerraformError = -2
-)
 
 type TerraformChanges struct {
 	Add     int
@@ -66,6 +66,20 @@ func (e RegexMatchError) Error() string {
 
 func updatesFinished() tea.Msg {
 	return UpdatesFinishedMsg("Projects updated")
+}
+
+func updateValidate(project *Project) tea.Cmd {
+	return func() tea.Msg {
+		output := runTerraformCommand(project.Path, Validate)
+		project.Output = output
+		if strings.Contains(output, "The configuration is valid") {
+			project.Valid = ConfigValid
+		} else {
+			project.Valid = ConfigInvalid
+		}
+
+		return UpdateValidateMsg(*project)
+	}
 }
 
 func updatePlan(project *Project) tea.Cmd {
