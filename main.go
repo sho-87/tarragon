@@ -81,7 +81,7 @@ func initialModel() MainModel {
 		keys:         mainKeys,
 		help:         help.New(),
 		spinner:      s,
-		progress:     progress.New(progress.WithDefaultGradient()),
+		progress:     progress.New(progress.WithDefaultScaledGradient(), progress.WithWidth(winSize.Width)),
 		working:      false,
 	}
 	return main
@@ -282,12 +282,11 @@ func (m MainModel) View() string {
 			working = ""
 		}
 
-		// FIXME: broken
-		var progress string
+		var progress string = ""
+		// FIXME: moves too quickly because SelectedRows() gets cleared after WithRows() is called
+		// https://github.com/Evertras/bubble-table/issues/167
 		if m.progress.Percent() > 0 && m.progress.Percent() < 1 {
-			progress = fmt.Sprintf("\n%s\n", m.progress.View())
-		} else {
-			progress = ""
+			progress = fmt.Sprint(m.progress.Percent()) + m.progress.View()
 		}
 
 		helpView := m.help.View(m.keys)
@@ -295,7 +294,7 @@ func (m MainModel) View() string {
 		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(working) + lipgloss.Height(progress)
 		paddingHeight := winSize.Height - contentHeight
 
-		output = body.String() + working + progress + strings.Repeat("\n", paddingHeight) + helpView
+		output = body.String() + working + "\n" + progress + strings.Repeat("\n", paddingHeight) + helpView
 
 	case confirmationView:
 		body := strings.Builder{}
