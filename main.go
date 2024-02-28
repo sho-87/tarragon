@@ -175,7 +175,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case key.Matches(msg, m.keys.ValidateHighlighted):
 				m.working = true
 				m.message = fmt.Sprintf("Terraform Validate: %s", project.Name)
-				cmds = append(cmds, m.spinner.Tick, runValidate(highlightedProject))
+				cmds = append(cmds, m.spinner.Tick, tea.Sequence(runValidate(highlightedProject), updatesFinished))
 
 			case key.Matches(msg, m.keys.ValidateSelected):
 				m.working = true
@@ -192,7 +192,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case key.Matches(msg, m.keys.PlanHighlighted):
 				m.working = true
 				m.message = fmt.Sprintf("Terraform Plan: %s", project.Name)
-				cmds = append(cmds, m.spinner.Tick, runPlan(highlightedProject))
+				cmds = append(cmds, m.spinner.Tick, tea.Sequence(runPlan(highlightedProject), updatesFinished))
 
 			case key.Matches(msg, m.keys.PlanSelected):
 				m.working = true
@@ -209,7 +209,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case key.Matches(msg, m.keys.ApplyHighlighted):
 				m.task = func(m *MainModel) tea.Cmd {
 					m.message = fmt.Sprintf("Terraform Apply: %s", project.Name)
-					return runApply(highlightedProject)
+					return tea.Sequence(runApply(highlightedProject), updatesFinished)
 				}
 				m.state = confirmationView
 
@@ -294,7 +294,7 @@ func (m MainModel) View() string {
 		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(working) + lipgloss.Height(progress)
 		paddingHeight := winSize.Height - contentHeight
 
-		output = body.String() + working + "\n" + progress + strings.Repeat("\n", paddingHeight) + helpView
+		output = body.String() + working + "\n" + strings.Repeat("\n", paddingHeight) + helpView
 
 	case confirmationView:
 		body := strings.Builder{}
