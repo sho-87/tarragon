@@ -1,0 +1,22 @@
+project_name: tarragon
+builds:
+  - id: "tarragon"
+  - env: [CGO_ENABLED=0]
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+nfpms:
+  - maintainer: Simon Ho <simonho.ubc@gmail.com>
+    description: Quick terraform actions for multiple projects.
+    homepage: https://github.com/sho-87/tarragon
+    license: MIT
+    formats:
+      - deb
+      - rpm
+      - apk
+release:
+  - draft: false
