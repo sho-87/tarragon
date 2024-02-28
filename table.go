@@ -73,8 +73,8 @@ func createProjectsTable() TableModel {
 			BorderRounded().
 			SortByAsc(columnName).
 			WithKeyMap(tableKeys).
-			WithTargetWidth(winSize.Width).
-			WithPageSize(winSize.Height - 5).
+			WithTargetWidth(WinSize.Width).
+			WithPageSize(WinSize.Height - 5).
 			WithMultiline(false).
 			WithBaseStyle(tableBase).
 			HighlightStyle(tableHighlighted),

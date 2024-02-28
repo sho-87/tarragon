@@ -18,9 +18,10 @@ import (
 	tsize "github.com/kopoli/go-terminal-size"
 )
 
-var winSize tsize.Size
-var Debug bool = false
+var WinSize tsize.Size
 var SearchPath string
+var Debug bool = false
+var ValidateOnRefresh bool = true
 
 type State int
 
@@ -70,7 +71,7 @@ func initialModel() MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
 	table := createProjectsTable()
-	output := OutputModel{width: winSize.Width, height: winSize.Height}
+	output := OutputModel{width: WinSize.Width, height: WinSize.Height}
 	output.createViewport()
 
 	main := MainModel{
@@ -81,7 +82,7 @@ func initialModel() MainModel {
 		keys:         mainKeys,
 		help:         help.New(),
 		spinner:      s,
-		progress:     progress.New(progress.WithDefaultScaledGradient(), progress.WithWidth(winSize.Width)),
+		progress:     progress.New(progress.WithDefaultScaledGradient(), progress.WithWidth(WinSize.Width)),
 		working:      false,
 	}
 	return main
@@ -137,6 +138,18 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.projects = msg
 			m.working = false
 			m.table.updateData(&m.projects)
+
+			if ValidateOnRefresh {
+				m.working = true
+				m.message = "Terraform Validate: all projects"
+
+				var batchArgs []tea.Cmd
+				batchArgs = append(batchArgs, m.spinner.Tick)
+				for i := range len(m.projects) {
+					batchArgs = append(batchArgs, runValidate(&m.projects[i]))
+				}
+				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
+			}
 
 		case UpdatePlanMsg:
 			m.message = fmt.Sprintf("Updated %s", msg.Name)
@@ -292,7 +305,7 @@ func (m MainModel) View() string {
 		helpView := m.help.View(m.keys)
 
 		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(working) + lipgloss.Height(progress)
-		paddingHeight := winSize.Height - contentHeight
+		paddingHeight := WinSize.Height - contentHeight
 
 		output = body.String() + working + "\n" + strings.Repeat("\n", paddingHeight) + helpView
 
@@ -302,7 +315,7 @@ func (m MainModel) View() string {
 		body.WriteString("\n")
 		confirm := m.confirmation.View()
 		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(confirm)
-		paddingHeight := winSize.Height - contentHeight
+		paddingHeight := WinSize.Height - contentHeight
 
 		output = body.String() + strings.Repeat("\n", paddingHeight) + confirm
 
@@ -313,7 +326,7 @@ func (m MainModel) View() string {
 }
 
 func main() {
-	winSize, _ = tsize.GetSize()
+	WinSize, _ = tsize.GetSize()
 
 	cwd, err := os.Getwd()
 	if err != nil {
