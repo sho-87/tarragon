@@ -10,7 +10,7 @@ builds:
       - arm64
 nfpms:
   - maintainer: Simon Ho <simonho.ubc@gmail.com>
-    description: Quick terraform actions for multiple projects.
+    description: Quick Terraform actions across multiple projects.
     homepage: https://github.com/sho-87/tarragon
     license: MIT
     formats:
