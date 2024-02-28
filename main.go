@@ -20,7 +20,7 @@ import (
 
 var WinSize tsize.Size
 var SearchPath string
-var Debug bool = false
+var Debug bool
 var ValidateOnRefresh bool = true
 
 type State int
