@@ -1,6 +1,5 @@
 project_name: tarragon
 builds:
-  - id: "tarragon"
   - env: [CGO_ENABLED=0]
     goos:
       - linux
