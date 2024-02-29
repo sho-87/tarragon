@@ -1,7 +1,7 @@
 # tarragon
 
 <p align="center">
-    <img src="images/tarragon.png" height="20%" width="20%">
+    <img src="images/logo.png" height="30%" width="30%">
 </p>
 
 <p align="center">
