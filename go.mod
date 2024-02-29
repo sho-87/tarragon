@@ -1,4 +1,4 @@
-module tarragon
+module github.com/sho-87/tarragon
 
 go 1.22.0
 
