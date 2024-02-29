@@ -1,6 +1,8 @@
 project_name: tarragon
 builds:
   - env: [CGO_ENABLED=0]
+		ldflags:
+				- -s -w -X main.version={{.Tag}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
     goos:
       - linux
       - windows
