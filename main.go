@@ -18,6 +18,8 @@ import (
 	tsize "github.com/kopoli/go-terminal-size"
 )
 
+var versionFlag bool
+var version string
 var WinSize tsize.Size
 var SearchPath string
 var Debug bool
@@ -334,8 +336,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	var versionFlag bool
-	var version string
 	flag.BoolVar(&versionFlag, "version", false, "Show version number")
 	flag.BoolVar(&Debug, "debug", false, "Enable logging to file (debug.log)")
 	flag.StringVar(&SearchPath, "path", cwd, "Path to search for Terraform projects")
