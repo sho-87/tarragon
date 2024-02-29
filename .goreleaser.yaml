@@ -17,6 +17,3 @@ nfpms:
       - deb
       - rpm
       - apk
-release:
-  semver:
-    format: "{{.Major}}.{{.Minor}}.{{.Patch}}"

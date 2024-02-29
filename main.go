@@ -334,9 +334,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	var versionFlag bool
+	var version string
+	flag.BoolVar(&versionFlag, "version", false, "Show version number")
 	flag.BoolVar(&Debug, "debug", false, "Enable logging to file (debug.log)")
 	flag.StringVar(&SearchPath, "path", cwd, "Path to search for Terraform projects")
 	flag.Parse()
+
+	if versionFlag {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	if Debug {
 		log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
