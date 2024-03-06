@@ -18,12 +18,14 @@ import (
 	tsize "github.com/kopoli/go-terminal-size"
 )
 
-var versionFlag bool
-var version string
-var WinSize tsize.Size
-var SearchPath string
-var Debug bool
-var ValidateOnRefresh bool = true
+var (
+	versionFlag       bool
+	version           string
+	WinSize           tsize.Size
+	SearchPath        string
+	Debug             bool
+	ValidateOnRefresh bool = true
+)
 
 type State int
 
@@ -34,36 +36,38 @@ const (
 )
 
 type MainModel struct {
-	state        State
-	table        TableModel
-	output       OutputModel
+	err          error
 	confirmation *confirmation.Model
 	task         func(*MainModel) tea.Cmd
-	projects     []Project
-	spinner      spinner.Model
-	progress     progress.Model
-	working      bool
-	err          error
+	help         help.Model
 	message      string
 	keys         KeyMap
-	help         help.Model
+	output       OutputModel
+	projects     []Project
+	spinner      spinner.Model
+	table        TableModel
+	progress     progress.Model
+	state        State
+	working      bool
 }
 
 type Project struct {
+	LastModified time.Time
 	Name         string
 	Path         string
-	LastModified time.Time
 	PlanOutput   string
-	PlanChanges  TerraformChanges
 	Valid        string
+	PlanChanges  TerraformChanges
 }
 
-type UpdateValidateMsg Project
-type UpdatePlanMsg Project
-type UpdateApplyMsg Project
-type UpdatesFinishedMsg string
-type RefreshFinishedMsg []Project
-type ErrMsg struct{ err error }
+type (
+	UpdateValidateMsg  Project
+	UpdatePlanMsg      Project
+	UpdateApplyMsg     Project
+	UpdatesFinishedMsg string
+	RefreshFinishedMsg []Project
+	ErrMsg             struct{ err error }
+)
 
 func (e ErrMsg) Error() string {
 	return e.err.Error()
