@@ -287,6 +287,7 @@ func (m MainModel) View() string {
 	switch m.state {
 	case tableView:
 		body := strings.Builder{}
+		body.WriteString("\n")
 		body.WriteString(m.table.model.View())
 		body.WriteString("\n")
 
@@ -297,9 +298,7 @@ func (m MainModel) View() string {
 			working = ""
 		}
 
-		var progress string = ""
-		// FIXME: moves too quickly because SelectedRows() gets cleared after WithRows() is called
-		// https://github.com/Evertras/bubble-table/issues/167
+		progress := ""
 		if m.progress.Percent() > 0 && m.progress.Percent() < 1 {
 			progress = fmt.Sprint(m.progress.Percent()) + m.progress.View()
 		}

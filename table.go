@@ -20,9 +20,6 @@ func matchProjectInMemory(path string, projects *[]Project) *Project {
 }
 
 func (m *TableModel) updateData(projects *[]Project) {
-	// FIXME: selected rows are lost when updating the table because all rows are replaced
-	// FIXME: clearing a filter currently doesnt update the table to show all rows
-	// https://github.com/Evertras/bubble-table/issues/136
 	m.model = m.model.WithRows(generateRowsFromProjects(projects))
 	m.updateFooter()
 }
