@@ -1,14 +1,14 @@
 # tarragon
 
 <p align="center">
-    <img src="images/logo.png" height="30%" width="30%">
+  <img src="images/logo.png" height="30%" width="30%" alt="logo">
 </p>
 
 <p align="center">
-	Quick Terraform actions across multiple projects.
+  Quick Terraform actions across multiple projects.
 </p>
 <p align="center">
-	Written in Go.
+  Written in Go.
 </p>
 
 ## Why?
@@ -19,13 +19,13 @@ You want to quickly `validate/plan/apply` projects without constantly changing t
 
 You need to run `apply` on multiple projects at the same time because your latest code changes affect both services, and you don't want to forget to push one without the other.
 
-Tarragon is a TUI application that lets you select multiple projects to perform simultaneous Terraform actions on.
+*Tarragon is a TUI application that lets you select multiple projects to perform simultaneous Terraform actions on.*
 
 ## Where?
 
 If you have [Go](https://go.dev/) installed, run:
 
-```
+```bash
 go install github.com/sho-87/tarragon@latest
 ```
 
@@ -35,7 +35,7 @@ Otherwise, you can download the application for your operating system on the [Re
 
 Tarragon is designed to work with related projects, so assumes that your projects are nested somewhere inside a common parent directory. Example:
 
-```
+```raw
 Services
 |--- Project1
 |--- Project2
