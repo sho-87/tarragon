@@ -128,7 +128,7 @@ func generateRowsFromProjects(projects *[]Project) []table.Row {
 			columnChange:       changeText,
 			columnDestroy:      destroyText,
 			columnValid:        validText,
-			columnLastModified: (*projects)[i].LastModified.Format("2006-01-02 15:04:05"),
+			columnLastModified: tableDate.Render((*projects)[i].LastModified.Format("2006-01-02 15:04:05")),
 			columnProject:      (*projects)[i],
 		})
 
