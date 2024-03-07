@@ -291,7 +291,7 @@ func (m MainModel) View() string {
 	switch m.state {
 	case tableView:
 		body := strings.Builder{}
-		body.WriteString("\n")
+		body.WriteString("\n\n")
 		body.WriteString(m.table.model.View())
 		body.WriteString("\n")
 
@@ -312,7 +312,7 @@ func (m MainModel) View() string {
 		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(working) + lipgloss.Height(progress)
 		paddingHeight := WinSize.Height - contentHeight
 
-		output = body.String() + working + "\n" + strings.Repeat("\n", max(paddingHeight, 0)) + helpView
+		output = body.String() + working + "\n" + strings.Repeat("\n", max(paddingHeight, 0)-1) + helpView
 
 	case confirmationView:
 		body := strings.Builder{}
