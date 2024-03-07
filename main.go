@@ -312,7 +312,7 @@ func (m MainModel) View() string {
 		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(working) + lipgloss.Height(progress)
 		paddingHeight := WinSize.Height - contentHeight
 
-		output = body.String() + working + "\n" + strings.Repeat("\n", paddingHeight) + helpView
+		output = body.String() + working + "\n" + strings.Repeat("\n", max(paddingHeight, 0)) + helpView
 
 	case confirmationView:
 		body := strings.Builder{}
@@ -322,7 +322,7 @@ func (m MainModel) View() string {
 		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(confirm)
 		paddingHeight := WinSize.Height - contentHeight
 
-		output = body.String() + strings.Repeat("\n", paddingHeight) + confirm
+		output = body.String() + strings.Repeat("\n", max(paddingHeight, 0)) + confirm
 
 	case outputView:
 		output = m.output.renderOutput()
