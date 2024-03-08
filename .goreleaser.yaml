@@ -19,3 +19,10 @@ nfpms:
       - deb
       - rpm
       - apk
+gomod:
+  proxy: true
+  env:
+    - GOPROXY=https://proxy.golang.org,direct
+    - GOSUMDB=sum.golang.org
+  mod: mod
+  gobinary: go1.22
