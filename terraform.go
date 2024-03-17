@@ -76,7 +76,8 @@ func runValidate(project *Project) tea.Cmd {
 		} else {
 			project.Valid = ConfigInvalid
 		}
-
+		project.LastAction = Validate
+		project.Output = output
 		return UpdateValidateMsg(*project)
 	}
 }
@@ -86,16 +87,18 @@ func runPlan(project *Project) tea.Cmd {
 		output := executeTerraformCommand(project.Path, Plan)
 		parsedPlan := parsePlanOutput(output)
 		project.PlanChanges = parsedPlan
-		project.PlanOutput = output
-
+		project.LastAction = Plan
+		project.Output = output
 		return UpdatePlanMsg(*project)
 	}
 }
 
 func runApply(project *Project) tea.Cmd {
 	return func() tea.Msg {
-		executeTerraformCommand(project.Path, Apply)
+		output := executeTerraformCommand(project.Path, Apply)
 		project.PlanChanges = TerraformChanges{0, 0, 0}
+		project.LastAction = Apply
+		project.Output = output
 		return UpdateApplyMsg(*project)
 	}
 }

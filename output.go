@@ -9,10 +9,11 @@ import (
 )
 
 type OutputModel struct {
+	title    string
+	action   TerraformCommand
+	viewport viewport.Model
 	width    int
 	height   int
-	title    string
-	viewport viewport.Model
 }
 
 func (m *OutputModel) createViewport() {
@@ -22,12 +23,13 @@ func (m *OutputModel) createViewport() {
 	m.viewport = vp
 }
 
-func (m *OutputModel) setTitle(title string) {
+func (m *OutputModel) setTitle(title string, lastAction TerraformCommand) {
 	m.title = title
+	m.action = lastAction
 }
 
 func (m *OutputModel) outputHeader() string {
-	title := outputTitle.Render(fmt.Sprintf("Output: %s", m.title))
+	title := outputTitle.Render(fmt.Sprintf("Output (%s): %s", m.action, m.title))
 	line := strings.Repeat("-", max(0, m.width-lipgloss.Width(title)))
 	header := lipgloss.JoinHorizontal(lipgloss.Center, title, line)
 	return header

@@ -55,7 +55,8 @@ type Project struct {
 	LastModified time.Time
 	Name         string
 	Path         string
-	PlanOutput   string
+	LastAction   TerraformCommand
+	Output       string
 	Valid        string
 	PlanChanges  TerraformChanges
 }
@@ -88,8 +89,11 @@ func initialModel() MainModel {
 		keys:         mainKeys,
 		help:         help.New(),
 		spinner:      s,
-		progress:     progress.New(progress.WithDefaultScaledGradient(), progress.WithWidth(WinSize.Width)),
-		working:      false,
+		progress: progress.New(
+			progress.WithDefaultScaledGradient(),
+			progress.WithWidth(WinSize.Width),
+		),
+		working: false,
 	}
 	return main
 }
@@ -114,8 +118,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.state == outputView {
 				m.state = tableView
 			} else {
-				m.output.setTitle(project.Name)
-				m.output.viewport.SetContent(project.PlanOutput)
+				m.output.setTitle(project.Name, project.LastAction)
+				m.output.viewport.SetContent(project.Output + strings.Repeat("\n", 4))
 				m.state = outputView
 			}
 		}
@@ -309,10 +313,19 @@ func (m MainModel) View() string {
 
 		helpView := m.help.View(m.keys)
 
-		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(working) + lipgloss.Height(progress)
+		contentHeight := lipgloss.Height(
+			body.String(),
+		) + lipgloss.Height(
+			working,
+		) + lipgloss.Height(
+			progress,
+		)
 		paddingHeight := WinSize.Height - contentHeight
 
-		output = body.String() + working + "\n" + strings.Repeat("\n", max(paddingHeight, 0)-1) + helpView
+		output = body.String() + working + "\n" + strings.Repeat(
+			"\n",
+			max(paddingHeight, 0)-1,
+		) + helpView
 
 	case confirmationView:
 		body := strings.Builder{}
