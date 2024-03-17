@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/evertras/bubble-table/table"
 )
@@ -20,7 +21,14 @@ func matchProjectInMemory(path string, projects *[]Project) *Project {
 }
 
 func (m *TableModel) updateData(projects *[]Project) {
-	m.model = m.model.WithRows(generateRowsFromProjects(projects))
+	var selected []string
+
+	for _, row := range m.model.SelectedRows() {
+		selected = append(selected, row.Data[columnProject].(Project).Path)
+	}
+
+	m.model = m.model.WithRows(generateRowsFromProjects(projects, selected))
+
 	m.updateFooter()
 }
 
@@ -52,7 +60,7 @@ const (
 
 func createProjectsTable() TableModel {
 	columns := generateColumns()
-	rows := generateRowsFromProjects(&[]Project{})
+	rows := generateRowsFromProjects(&[]Project{}, []string{})
 
 	tableKeys := table.DefaultKeyMap()
 	tableKeys.RowDown.SetKeys(mainKeys.Down.Keys()...)
@@ -95,14 +103,15 @@ func generateColumns() []table.Column {
 	return columns
 }
 
-func generateRowsFromProjects(projects *[]Project) []table.Row {
+func generateRowsFromProjects(projects *[]Project, selected []string) []table.Row {
 	rows := []table.Row{}
 	for i := range *projects {
 		// FIXME: fix this mess
 		addText := fmt.Sprint((*projects)[i].PlanChanges.Add)
 		changeText := fmt.Sprint((*projects)[i].PlanChanges.Change)
 		destroyText := fmt.Sprint((*projects)[i].PlanChanges.Destroy)
-		if addText == PlanError.String() || changeText == PlanError.String() || destroyText == PlanError.String() {
+		if addText == PlanError.String() || changeText == PlanError.String() ||
+			destroyText == PlanError.String() {
 			addText = errorStyle.Render("Error")
 			changeText = errorStyle.Render("Error")
 			destroyText = errorStyle.Render("Error")
@@ -122,15 +131,21 @@ func generateRowsFromProjects(projects *[]Project) []table.Row {
 		}
 
 		row := table.NewRow(table.RowData{
-			columnName:         (*projects)[i].Name,
-			columnPath:         tablePath.Render((*projects)[i].Path),
-			columnAdd:          addText,
-			columnChange:       changeText,
-			columnDestroy:      destroyText,
-			columnValid:        validText,
-			columnLastModified: tableDate.Render((*projects)[i].LastModified.Format("2006-01-02 15:04:05")),
-			columnProject:      (*projects)[i],
+			columnName:    (*projects)[i].Name,
+			columnPath:    tablePath.Render((*projects)[i].Path),
+			columnAdd:     addText,
+			columnChange:  changeText,
+			columnDestroy: destroyText,
+			columnValid:   validText,
+			columnLastModified: tableDate.Render(
+				(*projects)[i].LastModified.Format("2006-01-02 15:04:05"),
+			),
+			columnProject: (*projects)[i],
 		})
+
+		if slices.Contains(selected, (*projects)[i].Path) {
+			row = row.Selected(true)
+		}
 
 		rows = append(rows, row)
 	}
