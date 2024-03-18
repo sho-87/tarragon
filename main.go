@@ -42,13 +42,15 @@ type MainModel struct {
 	help         help.Model
 	message      string
 	keys         KeyMap
-	output       OutputModel
 	projects     []Project
+	output       OutputModel
 	spinner      spinner.Model
 	table        TableModel
 	progress     progress.Model
+	percent      float64
 	state        State
 	working      bool
+	refreshing   bool
 }
 
 type Project struct {
@@ -90,10 +92,11 @@ func initialModel() MainModel {
 		help:         help.New(),
 		spinner:      s,
 		progress: progress.New(
-			progress.WithDefaultScaledGradient(),
+			progress.WithGradient("#737c73", "#8992a7"),
 			progress.WithWidth(WinSize.Width),
 		),
-		working: false,
+		working:    false,
+		refreshing: false,
 	}
 	return main
 }
@@ -150,6 +153,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.table.updateData(&m.projects)
 
 			if ValidateOnRefresh {
+				m.refreshing = true
 				m.working = true
 				m.message = "Terraform Validate: all projects"
 
@@ -161,27 +165,30 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
 			}
 
-		case UpdatePlanMsg:
-			m.message = fmt.Sprintf("Updated %s", msg.Name)
-			m.table.updateData(&m.projects)
-			cmd := m.progress.IncrPercent(float64(1) / float64(len(m.table.model.SelectedRows())))
-			cmds = append(cmds, cmd)
-
 		case UpdateValidateMsg:
 			m.message = fmt.Sprintf("Validated %s", msg.Name)
 			m.table.updateData(&m.projects)
-			cmd := m.progress.IncrPercent(float64(1) / float64(len(m.table.model.SelectedRows())))
-			cmds = append(cmds, cmd)
+			if m.refreshing {
+				m.percent += float64(1) / float64(m.table.model.TotalRows())
+			} else {
+				m.percent += float64(1) / float64(len(m.table.model.SelectedRows()))
+			}
+
+		case UpdatePlanMsg:
+			m.message = fmt.Sprintf("Updated %s", msg.Name)
+			m.table.updateData(&m.projects)
+			m.percent += float64(1) / float64(len(m.table.model.SelectedRows()))
 
 		case UpdateApplyMsg:
 			m.message = fmt.Sprintf("Applied %s", msg.Name)
 			m.table.updateData(&m.projects)
-			cmd := m.progress.IncrPercent(float64(1) / float64(len(m.table.model.SelectedRows())))
-			cmds = append(cmds, cmd)
+			m.percent += float64(1) / float64(len(m.table.model.SelectedRows()))
 
 		case UpdatesFinishedMsg:
 			m.working = false
+			m.refreshing = false
 			m.message = string(msg)
+			m.percent = 0.0
 
 		case tea.KeyMsg:
 			switch {
@@ -297,18 +304,15 @@ func (m MainModel) View() string {
 		body := strings.Builder{}
 		body.WriteString("\n\n")
 		body.WriteString(m.table.model.View())
-		body.WriteString("\n")
+		body.WriteString("\n\n")
 
-		var working string
-		if m.working {
-			working = fmt.Sprintf("\n   %s %s...\n\n", m.spinner.View(), m.message)
-		} else {
-			working = ""
-		}
-
+		working := ""
 		progress := ""
-		if m.progress.Percent() > 0 && m.progress.Percent() < 1 {
-			progress = fmt.Sprint(m.progress.Percent()) + m.progress.View()
+		if m.working {
+			working = fmt.Sprintf(" %s %s...\n", m.spinner.View(), m.message)
+			if len(m.table.model.SelectedRows()) > 1 || m.refreshing {
+				progress = m.progress.ViewAs(m.percent)
+			}
 		}
 
 		helpView := m.help.View(m.keys)
@@ -322,7 +326,7 @@ func (m MainModel) View() string {
 		)
 		paddingHeight := WinSize.Height - contentHeight
 
-		output = body.String() + working + "\n" + strings.Repeat(
+		output = body.String() + working + progress + strings.Repeat(
 			"\n",
 			max(paddingHeight, 0)-1,
 		) + helpView
