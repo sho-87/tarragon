@@ -13,13 +13,15 @@
 
 ## Why?
 
-You have multiple [Terraform](https://www.terraform.io/) projects, but they're prototypes, quick tests, and don't warrant a dedicated deployment pipeline. So, you need to push them via the command line.
+You have multiple [Terraform](https://www.terraform.io/) projects, but they're prototypes, quick tests, and don't warrant a dedicated deployment pipeline. So, you need to work with them manually via the command line.
 
 You want to quickly `validate/plan/apply` projects without constantly changing to different project directories.
 
 You need to run `apply` on multiple projects at the same time because your latest code changes affect both services, and you don't want to forget to push one without the other.
 
-*Tarragon is a TUI application that lets you select multiple projects to perform simultaneous Terraform actions on.*
+_Tarragon is a TUI application that lets you select multiple projects to perform simultaneous Terraform actions on._
+
+![Screenshot](images/table.png)
 
 ## Where?
 
@@ -57,4 +59,16 @@ Run `validate/plan/apply` actions using `v`, `p`, and `a` on a highlighted proje
 
 You can select multiple projects using `space` and run actions on them at the same time using the capitalized keybinds `V`, `P`, and `A`.
 
-**Note**: `apply` will always run with the `--auto-approve` flag, so it's recommend to first run `plan` on the project and view the output (`tab`)
+**Note**: `apply` will always run with the `--auto-approve` flag, so it's recommend to first run `plan` on the project and check the output.
+
+#### Output View
+
+After running any Terraform command on a project, you can view the most recent output by pressing `tab`:
+
+![Output](images/output.png)
+
+#### Filtering
+
+You can filter the projects table by pressing `/`, which will bring up an input field for the filter term:
+
+![Filtering](images/filter.png)
