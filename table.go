@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/evertras/bubble-table/table"
 )
@@ -34,15 +35,11 @@ func (m *TableModel) updateData(projects *[]Project) {
 
 func (m *TableModel) updateFooter() {
 	footerText := fmt.Sprintf(
-		"Page %d/%d | # Projects: %d",
+		"Page %d/%d  |  # Projects: %d",
 		m.model.CurrentPage(),
 		m.model.MaxPages(),
 		m.model.TotalRows(),
 	)
-
-	if m.model.GetIsFilterInputFocused() {
-		footerText += fmt.Sprintf(" | Filter: %s", m.model.GetCurrentFilter())
-	}
 
 	m.model = m.model.WithStaticFooter(footerText)
 }
@@ -57,6 +54,26 @@ const (
 	columnValid        = "Valid"
 	columnProject      = "Project"
 )
+
+func (m *TableModel) renderTable() string {
+	filter := ""
+	if m.model.GetIsFilterInputFocused() {
+		filter = fmt.Sprintf(" Filter: %s_", m.model.GetCurrentFilter())
+		filter = tableFilterTyping.Render(filter)
+	} else if m.model.GetCurrentFilter() != "" {
+		filter = fmt.Sprintf(" Filter: %s", m.model.GetCurrentFilter())
+		filter = tableFilterSet.Render(filter)
+	}
+
+	body := strings.Builder{}
+	body.WriteString("\n\n")
+	body.WriteString(filter)
+	body.WriteString("\n")
+	body.WriteString(m.model.View())
+	body.WriteString("\n\n")
+
+	return body.String()
+}
 
 func createProjectsTable() TableModel {
 	columns := generateColumns()

@@ -191,79 +191,81 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.percent = 0.0
 
 		case tea.KeyMsg:
-			switch {
-			case key.Matches(msg, m.keys.Help):
-				m.help.ShowAll = !m.help.ShowAll
+			if !m.table.model.GetIsFilterInputFocused() {
+				switch {
+				case key.Matches(msg, m.keys.Help):
+					m.help.ShowAll = !m.help.ShowAll
 
-			case key.Matches(msg, m.keys.Quit):
-				cmds = append(cmds, tea.Quit)
+				case key.Matches(msg, m.keys.Quit):
+					cmds = append(cmds, tea.Quit)
 
-			case key.Matches(msg, m.keys.Refresh):
-				m.working = true
-				cmds = append(cmds, m.spinner.Tick, refreshProjects)
+				case key.Matches(msg, m.keys.Refresh):
+					m.working = true
+					cmds = append(cmds, m.spinner.Tick, refreshProjects)
 
-			case key.Matches(msg, m.keys.ValidateHighlighted):
-				m.working = true
-				m.message = fmt.Sprintf("Terraform Validate: %s", project.Name)
-				cmds = append(cmds, m.spinner.Tick, tea.Sequence(runValidate(highlightedProject), updatesFinished))
+				case key.Matches(msg, m.keys.ValidateHighlighted):
+					m.working = true
+					m.message = fmt.Sprintf("Terraform Validate: %s", project.Name)
+					cmds = append(cmds, m.spinner.Tick, tea.Sequence(runValidate(highlightedProject), updatesFinished))
 
-			case key.Matches(msg, m.keys.ValidateSelected):
-				m.working = true
-				m.message = "Terraform Validate: selected projects"
-
-				var batchArgs []tea.Cmd
-				batchArgs = append(batchArgs, m.spinner.Tick)
-				for _, row := range m.table.model.SelectedRows() {
-					project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
-					batchArgs = append(batchArgs, runValidate(project))
-				}
-				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
-
-			case key.Matches(msg, m.keys.PlanHighlighted):
-				m.working = true
-				m.message = fmt.Sprintf("Terraform Plan: %s", project.Name)
-				cmds = append(cmds, m.spinner.Tick, tea.Sequence(runPlan(highlightedProject), updatesFinished))
-
-			case key.Matches(msg, m.keys.PlanSelected):
-				m.working = true
-				m.message = "Terraform Plan: selected projects"
-
-				var batchArgs []tea.Cmd
-				batchArgs = append(batchArgs, m.spinner.Tick)
-				for _, row := range m.table.model.SelectedRows() {
-					project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
-					batchArgs = append(batchArgs, runPlan(project))
-				}
-				cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
-
-			case key.Matches(msg, m.keys.ApplyHighlighted):
-				m.task = func(m *MainModel) tea.Cmd {
-					m.message = fmt.Sprintf("Terraform Apply: %s", project.Name)
-					return tea.Sequence(runApply(highlightedProject), updatesFinished)
-				}
-				m.state = confirmationView
-
-			case key.Matches(msg, m.keys.ApplySelected):
-				m.task = func(m *MainModel) tea.Cmd {
-					m.message = "Terraform Apply: selected projects"
+				case key.Matches(msg, m.keys.ValidateSelected):
+					m.working = true
+					m.message = "Terraform Validate: selected projects"
 
 					var batchArgs []tea.Cmd
+					batchArgs = append(batchArgs, m.spinner.Tick)
 					for _, row := range m.table.model.SelectedRows() {
 						project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
-						batchArgs = append(batchArgs, runApply(project))
+						batchArgs = append(batchArgs, runValidate(project))
 					}
-					return tea.Sequence(tea.Batch(batchArgs...), updatesFinished)
-				}
-				m.state = confirmationView
+					cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
 
-			case key.Matches(msg, m.keys.SelectAll):
-				rows := m.table.model.GetVisibleRows()
-				for i, row := range rows {
-					rows[i] = row.Selected(true)
-				}
+				case key.Matches(msg, m.keys.PlanHighlighted):
+					m.working = true
+					m.message = fmt.Sprintf("Terraform Plan: %s", project.Name)
+					cmds = append(cmds, m.spinner.Tick, tea.Sequence(runPlan(highlightedProject), updatesFinished))
 
-			case key.Matches(msg, m.keys.DeselectAll):
-				m.table.model.WithAllRowsDeselected()
+				case key.Matches(msg, m.keys.PlanSelected):
+					m.working = true
+					m.message = "Terraform Plan: selected projects"
+
+					var batchArgs []tea.Cmd
+					batchArgs = append(batchArgs, m.spinner.Tick)
+					for _, row := range m.table.model.SelectedRows() {
+						project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
+						batchArgs = append(batchArgs, runPlan(project))
+					}
+					cmds = append(cmds, tea.Sequence(tea.Batch(batchArgs...), updatesFinished))
+
+				case key.Matches(msg, m.keys.ApplyHighlighted):
+					m.task = func(m *MainModel) tea.Cmd {
+						m.message = fmt.Sprintf("Terraform Apply: %s", project.Name)
+						return tea.Sequence(runApply(highlightedProject), updatesFinished)
+					}
+					m.state = confirmationView
+
+				case key.Matches(msg, m.keys.ApplySelected):
+					m.task = func(m *MainModel) tea.Cmd {
+						m.message = "Terraform Apply: selected projects"
+
+						var batchArgs []tea.Cmd
+						for _, row := range m.table.model.SelectedRows() {
+							project := matchProjectInMemory(row.Data[columnProject].(Project).Path, &m.projects)
+							batchArgs = append(batchArgs, runApply(project))
+						}
+						return tea.Sequence(tea.Batch(batchArgs...), updatesFinished)
+					}
+					m.state = confirmationView
+
+				case key.Matches(msg, m.keys.SelectAll):
+					rows := m.table.model.GetVisibleRows()
+					for i, row := range rows {
+						rows[i] = row.Selected(true)
+					}
+
+				case key.Matches(msg, m.keys.DeselectAll):
+					m.table.model.WithAllRowsDeselected()
+				}
 			}
 		}
 
@@ -296,50 +298,41 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func (m MainModel) renderProgress() string {
+	working := ""
+	progress := ""
+	if m.working {
+		working = fmt.Sprintf(" %s %s...", m.spinner.View(), m.message)
+		if len(m.table.model.SelectedRows()) > 1 || m.refreshing {
+			progress = m.progress.ViewAs(m.percent)
+		}
+	}
+	return working + "\n" + progress
+}
+
 func (m MainModel) View() string {
 	var output string
 
 	switch m.state {
 	case tableView:
-		body := strings.Builder{}
-		body.WriteString("\n\n")
-		body.WriteString(m.table.model.View())
-		body.WriteString("\n\n")
-
-		working := ""
-		progress := ""
-		if m.working {
-			working = fmt.Sprintf(" %s %s...\n", m.spinner.View(), m.message)
-			if len(m.table.model.SelectedRows()) > 1 || m.refreshing {
-				progress = m.progress.ViewAs(m.percent)
-			}
-		}
-
+		table := m.table.renderTable()
+		progress := m.renderProgress()
 		helpView := m.help.View(m.keys)
 
-		contentHeight := lipgloss.Height(
-			body.String(),
-		) + lipgloss.Height(
-			working,
-		) + lipgloss.Height(
-			progress,
-		)
-		paddingHeight := WinSize.Height - contentHeight
+		contentHeight := lipgloss.Height(table) + lipgloss.Height(progress)
+		paddingHeight := WinSize.Height - contentHeight - lipgloss.Height(helpView)
 
-		output = body.String() + working + progress + strings.Repeat(
-			"\n",
-			max(paddingHeight, 0)-1,
-		) + helpView
+		output = table + progress + strings.Repeat("\n", max(paddingHeight, 0)) + helpView
 
 	case confirmationView:
-		body := strings.Builder{}
-		body.WriteString(m.table.model.View())
-		body.WriteString("\n")
+		table := m.table.renderTable()
+		progress := m.renderProgress()
 		confirm := m.confirmation.View()
-		contentHeight := lipgloss.Height(body.String()) + lipgloss.Height(confirm)
-		paddingHeight := WinSize.Height - contentHeight
 
-		output = body.String() + strings.Repeat("\n", max(paddingHeight, 0)) + confirm
+		contentHeight := lipgloss.Height(table) + lipgloss.Height(progress)
+		paddingHeight := WinSize.Height - contentHeight - lipgloss.Height(confirm)
+
+		output = table + progress + strings.Repeat("\n", max(paddingHeight, 0)) + confirm
 
 	case outputView:
 		output = m.output.renderOutput()
